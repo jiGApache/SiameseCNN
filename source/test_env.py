@@ -3,14 +3,22 @@ import scipy.io
 import codecs
 import pandas as pd
 import numpy as np
-
+import math
 import torch
 import torch.nn as nn
-
+import matplotlib.pyplot as plt
+from pairsDataset import PairsDataset
 
 # chinese_dtst_reference = pd.read_csv('ChineseDataset\REFERENCE.csv', delimiter=',')
 # # print(chinese_dtst_reference)
-# mat = scipy.io.loadmat('ChineseDataset\TrainingSet1\A0001.mat')
+# ecg = scipy.io.loadmat('ChineseDataset\TrainingSet1\A0202.mat')['ECG'][0][0][2]
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+ds = PairsDataset(DEVICE, fill_with_type='cyclic_repeat')
+
+ecg0 = ds.__getitem__(0)
+plt.plot(ecg0[0][1][0])
+plt.show()
+
 # print(mat)
 
 # import matplotlib.pyplot as plt
@@ -105,26 +113,3 @@ import torch.nn as nn
 
 # print('means: ', means)
 # print('stds: ', stds)
-
-
-
-
-# from pairsDataset import PairsDataset
-# from torch.utils.data import DataLoader 
-# import matplotlib.pyplot as plt
-# import math
-# import os
-
-# ds = PairsDataset(same_size=True)
-# dl = DataLoader(ds, batch_size=1, shuffle=True)
-
-# for TS_T, label in dl:
-#     TS1, TS2, label = TS_T[0], TS_T[1], label
-
-#     plt.plot(TS1[0][1], 'r')
-#     plt.plot(TS2[0][1], 'b')
-#     print(TS1[0][1].std())
-
-#     plt.show()
-    
-print( torch.cuda.is_available())
