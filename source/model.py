@@ -9,49 +9,49 @@ class Siamese(nn.Module):
         self.slope = 0.1
 
         self.conv1 = nn.Sequential(
-            nn.Conv1d(12, 24, 5, bias=False),
+            nn.Conv1d(12, 24, kernel_size=30, stride=15),
             nn.BatchNorm1d(24),
             nn.LeakyReLU(negative_slope=self.slope),
-            nn.MaxPool1d(3, stride=3)
+            nn.MaxPool1d(5, stride=3)
         )
 
         self.conv2 = nn.Sequential(
-            nn.Conv1d(24, 64, 5, bias=False),
+            nn.Dropout(0.2),
+            nn.Conv1d(24, 64, kernel_size=20, stride=10),
             nn.BatchNorm1d(64),
             nn.LeakyReLU(negative_slope=self.slope),
-            nn.Dropout(0.2),
             nn.MaxPool1d(3, stride=3)
         )
 
         self.conv3 = nn.Sequential(
-            nn.Conv1d(64, 128, 4, bias=False),
+            nn.Conv1d(64, 128, kernel_size=16, stride=8),
             nn.BatchNorm1d(128),
             nn.LeakyReLU(negative_slope=self.slope),
             nn.MaxPool1d(3, stride=3)
         )
 
-        self.conv4 = nn.Sequential(
-            nn.Conv1d(128, 256, 4, bias=False),
-            nn.BatchNorm1d(256),
-            nn.LeakyReLU(negative_slope=self.slope),
-            nn.Dropout(0.2),
-            nn.MaxPool1d(2, stride=2)
-        )
+        # self.conv4 = nn.Sequential(
+        #     nn.Dropout(0.2),
+        #     nn.Conv1d(128, 256, kernel_size=12, stride=6),
+        #     nn.BatchNorm1d(256),
+        #     nn.LeakyReLU(negative_slope=self.slope),
+        #     nn.MaxPool1d(2, stride=2)
+        # )
 
-        self.conv5 = nn.Sequential(
-            nn.Conv1d(256, 32, 3, bias=False),
-            nn.BatchNorm1d(32),
-            nn.LeakyReLU(negative_slope=self.slope),
-            nn.MaxPool1d(2, stride=2)
-        )
+        # self.conv5 = nn.Sequential(
+        #     nn.Conv1d(256, 32, kernel_size=8, stride=4),
+        #     nn.BatchNorm1d(32),
+        #     nn.LeakyReLU(negative_slope=self.slope),
+        #     nn.MaxPool1d(2, stride=2)
+        # )
 
-        self.conv6 = nn.Sequential(
-            nn.Conv1d(32, 24, 3, bias=False),
-            nn.BatchNorm1d(24),
-            nn.LeakyReLU(negative_slope=self.slope),
-            nn.Dropout(0.2),
-            nn.MaxPool1d(2, stride=2)
-        )
+        # self.conv6 = nn.Sequential(
+        #     nn.Dropout(0.2),
+        #     nn.Conv1d(32, 24, kernel_size=4, stride=2),
+        #     nn.BatchNorm1d(24),
+        #     nn.LeakyReLU(negative_slope=self.slope),
+        #     nn.MaxPool1d(2, stride=2)
+        # )
 
         self.dense = nn.Sequential(
             nn.Flatten(start_dim=1),

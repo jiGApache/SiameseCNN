@@ -3,6 +3,7 @@ import scipy.io
 import numpy as np
 from PreprocessingFilters import filter1
 import math
+import scipy
 
 ECG_MAX_LEN = 15000
 
@@ -13,7 +14,9 @@ def prepare_dataset(fill_with_type, path='ChineseDataset\\'):
 
     total_data = []
 
+
     print("Starting filtering...")
+
 
     for i in range(2000):
         ecg = scipy.io.loadmat('ChineseDataset\TrainingSet1\\' + df['Recording'][i] + '.mat')['ECG'][0][0][2][:, 100:-100]
@@ -40,8 +43,8 @@ def prepare_dataset(fill_with_type, path='ChineseDataset\\'):
 
         print_progressBar(i+1, 2000, prefix='Filtering ECG:', length=50)
 
-    print("Filtering done!\nStarting channel-wise ECG normalization...")
 
+    print("Filtering done! Starting channel-wise ECG normalization...")
 
 
     ### Channel-wise normalization
@@ -50,10 +53,17 @@ def prepare_dataset(fill_with_type, path='ChineseDataset\\'):
     for i, recording in enumerate(total_data):
         for j in range(12):
             recording[0][j] = (recording[0][j] - channel_means[j]) / channel_stds[j]
-        np.savetxt(f'{path}PreparedDataset_{fill_with_type}\{recording[1]}.csv', recording[0])
         print_progressBar(i+1, 2000, prefix='Normalizing ECG:', length=50)
 
-    print("Normalization done!\nDataset preparation complete!")
+
+    print(f"Normaization done! Saving data to {path}PreparedDataset_{fill_with_type}\\")
+
+
+    for i, recording in enumerate(total_data):
+        scipy.io.savemat(f'{path}PreparedDataset_{fill_with_type}\{recording[1]}.mat', {'ECG': recording[0]})
+        print_progressBar(i+1, 2000, prefix='Saving:', length=50)
+
+    print("Normalization done! Dataset preparation complete!")
 
     
 def fill_with_mean(ecg):

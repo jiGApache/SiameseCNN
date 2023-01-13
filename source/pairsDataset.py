@@ -4,6 +4,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 import numpy as np
+import scipy.io
 from DatasetPreprocessing import prepare_dataset
 
 class PairsDataset(Dataset):
@@ -53,12 +54,14 @@ class PairsDataset(Dataset):
                 s_el_pos = (s_el_pos + 1) % df.shape[0]
                 counter += 1
             
-            ekg1 = np.genfromtxt(f'ChineseDataset\PreparedDataset_{self.fill_with_type}\{df["Recording"][f_el_pos]}.csv')
-            ekg2 = np.genfromtxt(f'ChineseDataset\PreparedDataset_{self.fill_with_type}\{df["Recording"][s_el_pos]}.csv')
+            # ekg1 = np.genfromtxt(f'ChineseDataset\PreparedDataset_{self.fill_with_type}\{df["Recording"][f_el_pos]}.csv')
+            # ekg2 = np.genfromtxt(f'ChineseDataset\PreparedDataset_{self.fill_with_type}\{df["Recording"][s_el_pos]}.csv')
+            ecg1 = scipy.io.loadmat(f'ChineseDataset\PreparedDataset_{self.fill_with_type}\{df["Recording"][f_el_pos]}.mat')['ECG']
+            ecg2 = scipy.io.loadmat(f'ChineseDataset\PreparedDataset_{self.fill_with_type}\{df["Recording"][s_el_pos]}.mat')['ECG']
 
             return (
-                torch.as_tensor(ekg1, dtype=torch.float32),#FloatTensor(ekg1),
-                torch.as_tensor(ekg2, dtype=torch.float32),#FloatTensor(ekg2),
+                torch.as_tensor(ecg1, dtype=torch.float32),#FloatTensor(ekg1),
+                torch.as_tensor(ecg2, dtype=torch.float32),#FloatTensor(ekg2),
             ), torch.as_tensor((1.), dtype=torch.float32)
         else: index -= df.shape[0]
         
@@ -71,12 +74,14 @@ class PairsDataset(Dataset):
         if (index >= 0) and (index < df1.shape[0]):
             rand_item = random.randint(0, (df2.shape[0]) - 1)
 
-            random_ekg = np.genfromtxt(f'ChineseDataset\PreparedDataset_{self.fill_with_type}\{df2["Recording"][rand_item]}.csv')
-            ekg = np.genfromtxt(f'ChineseDataset\PreparedDataset_{self.fill_with_type}\{df1["Recording"][index]}.csv')
+            # random_ekg = np.genfromtxt(f'ChineseDataset\PreparedDataset_{self.fill_with_type}\{df2["Recording"][rand_item]}.csv')
+            # ekg = np.genfromtxt(f'ChineseDataset\PreparedDataset_{self.fill_with_type}\{df1["Recording"][index]}.csv')
+            random_ecg = scipy.io.loadmat(f'ChineseDataset\PreparedDataset_{self.fill_with_type}\{df2["Recording"][rand_item]}.mat')['ECG']
+            ecg = scipy.io.loadmat(f'ChineseDataset\PreparedDataset_{self.fill_with_type}\{df1["Recording"][index]}.mat')['ECG']
 
             return (
-                torch.as_tensor(ekg, dtype=torch.float32),#FloatTensor(ekg),
-                torch.as_tensor(random_ekg, dtype=torch.float32),#FloatTensor(random_ekg)
+                torch.as_tensor(ecg, dtype=torch.float32),#FloatTensor(ekg),
+                torch.as_tensor(random_ecg, dtype=torch.float32),#FloatTensor(random_ekg)
             ), torch.as_tensor((0.), dtype=torch.float32)
         else:  index -= df1.shape[0]
 

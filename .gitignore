@@ -1,4 +1,8 @@
-ChineseDataset/
+ChineseDataset/PreparedDataset_mean/
+ChineseDataset/PreparedDataset_cyclic_repeat/
+ChineseDataset/TrainingSet1/
 LobachevskyDataset/
 history/
-nets/
+source/test.py
+source/test_env.py
+source/__pycache__/

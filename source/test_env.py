@@ -15,9 +15,11 @@ from pairsDataset import PairsDataset
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 ds = PairsDataset(DEVICE, fill_with_type='cyclic_repeat')
 
-ecg0 = ds.__getitem__(0)
-plt.plot(ecg0[0][1][0])
-plt.show()
+for i in range(ds.__len__()):
+    ecg = ds.__getitem__(115)
+    plt.plot(ecg[0][0][0])
+    plt.show()
+    break
 
 # print(mat)
 
