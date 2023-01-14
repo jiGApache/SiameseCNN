@@ -3,10 +3,11 @@ import scipy.io
 import numpy as np
 from PreprocessingFilters import filter1
 import math
-import scipy
 
 ECG_MAX_LEN = 15000
 
+
+# USE NOLY FOR CHINESE DATASET!!!!
 def prepare_dataset(fill_with_type, path='ChineseDataset\\'):
 
     df = pd.read_csv('ChineseDataset\REFERENCE.csv', delimiter=',')

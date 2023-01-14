@@ -7,19 +7,29 @@ import math
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
-from pairsDataset import PairsDataset
+from Chinese_PairsDataset import PairsDataset as DS_Chinese
+from ECG5000_PairsDataset import PairsDataset as DS_5000
+
+data = scipy.io.arff.loadarff('ECG5000\ECG5000.arff')
+df = pd.DataFrame(data[0])
+aa = np.expand_dims(np.array(df.iloc[0, :-1]), 0)
+print(aa)
 
 # chinese_dtst_reference = pd.read_csv('ChineseDataset\REFERENCE.csv', delimiter=',')
 # # print(chinese_dtst_reference)
 # ecg = scipy.io.loadmat('ChineseDataset\TrainingSet1\A0202.mat')['ECG'][0][0][2]
-DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-ds = PairsDataset(DEVICE, fill_with_type='cyclic_repeat')
+# ecg = scipy.io.loadmat('ChineseDataset\TrainingSet1\A1445.mat')['ECG'][0][0][2]
+# plt.plot(ecg[6])
+# plt.show()
 
-for i in range(ds.__len__()):
-    ecg = ds.__getitem__(115)
-    plt.plot(ecg[0][0][0])
-    plt.show()
-    break
+# DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# ds = PairsDataset(DEVICE, fill_with_type='mean')
+
+# for i in range(ds.__len__()):
+#     ecg = ds.__getitem__(1)
+#     plt.plot(ecg[6][0][0])
+#     plt.show()
+#     break
 
 # print(mat)
 

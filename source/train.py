@@ -1,4 +1,5 @@
-from pairsDataset import PairsDataset
+from Chinese_PairsDataset import PairsDataset as DS_Chinese
+from ECG5000_PairsDataset import PairsDataset as DS_5000
 import numpy as np
 from model import Siamese
 import torch
@@ -6,12 +7,13 @@ import torch.nn as nn
 from torch.utils.data import DataLoader 
 from torch.utils.data import random_split
 import matplotlib.pyplot as plt
+import os
 
 # Hyper params
 #########################################################
 SEED = 42
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 30
+EPOCHS = 5
 LR = 0.001
 # LOSS_FUNCTION = nn.BCEWithLogitsLoss().cuda()
 LOSS_FUNCTION = nn.BCELoss().cuda()
@@ -48,12 +50,13 @@ def show_history(history):
     plt.show()
 
 
-full_ds = PairsDataset(device=DEVICE, fill_with_type='mean')
+# full_ds = DS_Chinese(device=DEVICE, fill_with_type='mean')
+full_ds = DS_5000()
 train_size = int(0.8 * len(full_ds))
 test_size = len(full_ds) - train_size
 train_ds, test_ds = random_split(full_ds, [train_size, test_size], generator=torch.Generator().manual_seed(SEED))
-train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=5, pin_memory=True)
-test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=5, pin_memory=True)
+train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
+test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
 
 
 history = {
@@ -140,6 +143,8 @@ if __name__ == '__main__':
 
         print(f'Epoch: {epoch+1}\n\tTrain accuracy: {train_acc:.5f} -- Train loss: {train_loss:.5f}\n\tTest accuracy:  {test_acc:.5f} -- Test loss:  {test_loss:.5f}\n\n')
             
+    if not os.path.exists('nets'):
+        os.mkdir('nets')
     torch.save(model.state_dict(), 'nets\\SCNN.pth')
 
     show_history(history)
