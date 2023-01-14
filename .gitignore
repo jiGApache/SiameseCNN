@@ -3,7 +3,6 @@ ChineseDataset/PreparedDataset_cyclic_repeat/
 ChineseDataset/TrainingSet1/
 LobachevskyDataset/
 history/
-images/
 source/test.py
 source/test_env.py
 source/__pycache__/
