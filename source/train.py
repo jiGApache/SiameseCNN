@@ -13,19 +13,20 @@ import os
 #########################################################
 SEED = 42
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 5
+EPOCHS = 100
 LR = 0.001
 # LOSS_FUNCTION = nn.BCEWithLogitsLoss().cuda()
 LOSS_FUNCTION = nn.BCELoss().cuda()
 BATCH_SIZE = 64
 WEIGHT_DECAY = 0.001
 model = Siamese().to(DEVICE)
+# model.load_state_dict(torch.load('nets\EPOCH=100_BATCH=64_SCNN.pth'))
 optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
 # scaler = torch.cuda.amp.GradScaler()
 #########################################################
 
 torch.manual_seed(SEED)
-torch.backends.cudnn.benchmark = True
+# torch.backends.cudnn.benchmark = True
 
 
 def show_history(history):
@@ -50,8 +51,8 @@ def show_history(history):
     plt.show()
 
 
-# full_ds = DS_Chinese(device=DEVICE, fill_with_type='mean')
-full_ds = DS_5000()
+full_ds = DS_Chinese(device=DEVICE, fill_with_type='mean')
+# full_ds = DS_5000()
 train_size = int(0.8 * len(full_ds))
 test_size = len(full_ds) - train_size
 train_ds, test_ds = random_split(full_ds, [train_size, test_size], generator=torch.Generator().manual_seed(SEED))
