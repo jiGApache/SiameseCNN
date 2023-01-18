@@ -6,15 +6,16 @@ import math
 
 np.random.seed(42)
 
-FRAGMENT_SIZE = 2900
-STEP_SIZE = 1500
+FRAGMENT_SIZE = 2900    # or KERNEL_SIZE
+STEP_SIZE = 1500        # or STRIDE
 df = pd.read_csv('ChineseDataset\REFERENCE.csv', delimiter=',')
 df = df.loc[df['Recording'] <= 'A2000'].reset_index(drop=True)
+dataset_size = len(df)
 total_data = []
 
 def prepare_dataset(path='ChineseDataset\\'):
 
-    for i in range(2000):
+    for i in range(dataset_size):
         ecg = scipy.io.loadmat('ChineseDataset\TrainingSet1\\' + df['Recording'][i] + '.mat')['ECG'][0][0][2]#[:, 100:-100]
        
         ### Filtering EKG
@@ -23,7 +24,7 @@ def prepare_dataset(path='ChineseDataset\\'):
         recording = [ecg, df['Recording'][i]]        
         total_data.append(recording)
 
-        print_progressBar(i+1, 2000, prefix='Filtering ECG:', length=50)
+        print_progressBar(i+1, dataset_size, prefix='Filtering ECG:', length=50)
 
 
     print("Filtering done! Starting channel-wise ECG normalization...")
@@ -34,23 +35,28 @@ def prepare_dataset(path='ChineseDataset\\'):
     for i, recording in enumerate(total_data):
         for j in range(12):
             recording[0][j] = (recording[0][j] - channel_means[j]) / channel_stds[j]
-        print_progressBar(i+1, 2000, prefix='Normalizing ECG:', length=50)
+        print_progressBar(i+1, dataset_size, prefix='Normalizing ECG:', length=50)
 
 
     print(f"Normaization done! Saving data to {path}PreparedDataset_Noisy\\")
 
 
+    bias = 0
     for i, recording in enumerate(total_data):
-        scipy.io.savemat(f'{path}PreparedDataset_Noisy\{recording[1]}_1_clean.mat', {'ECG': recording[0][:, :FRAGMENT_SIZE]})
-        scipy.io.savemat(f'{path}PreparedDataset_Noisy\{recording[1]}_2_clean.mat', {'ECG': recording[0][:, STEP_SIZE:STEP_SIZE+FRAGMENT_SIZE]})
+        total_fragments_in_ecg = math.floor((len(recording[0][0]) - FRAGMENT_SIZE) / STEP_SIZE) + 1 # Convolution formula
         
-        noise = np.random.normal(0, channel_stds[0] * 0.08, [1, FRAGMENT_SIZE])
-        for j in range(1, 12):
-            noise = np.concatenate((noise, np.random.normal(0, channel_stds[j] * 0.05, [1, FRAGMENT_SIZE])), axis=0)
+        for fragment_index in range(total_fragments_in_ecg):
+            scipy.io.savemat(f'{path}PreparedDataset_Noisy\{bias + fragment_index}_clean.mat', {'ECG': recording[0][:, STEP_SIZE * fragment_index:STEP_SIZE * fragment_index + FRAGMENT_SIZE]})
+            
+            noise = np.random.normal(0, channel_stds[0] * 0.1, [1, FRAGMENT_SIZE])
+            for j in range(1, 12):
+                noise = np.concatenate((noise, np.random.normal(0, channel_stds[j] * 0.1, [1, FRAGMENT_SIZE])), axis=0)
 
-        scipy.io.savemat(f'{path}PreparedDataset_Noisy\{recording[1]}_2_noisy.mat', {'ECG': recording[0][:, STEP_SIZE:STEP_SIZE+FRAGMENT_SIZE] + noise})
+            scipy.io.savemat(f'{path}PreparedDataset_Noisy\{bias + fragment_index}_noisy.mat', {'ECG': recording[0][:, STEP_SIZE * fragment_index:STEP_SIZE * fragment_index + FRAGMENT_SIZE] + noise})
         
-        print_progressBar(i+1, 2000, prefix='Saving:', length=50)
+        bias += total_fragments_in_ecg
+
+        print_progressBar(i+1, dataset_size, prefix='Saving:', length=50)
 
     print("Dataset preparation complete!")
 

@@ -10,24 +10,29 @@ class NoisyPairsDataset(Dataset):
     
     def __init__(self):
 
-        if (not os.path.exists(f'ChineseDataset\PreparedDataset_Noisy')):
-            os.mkdir(f'ChineseDataset\PreparedDataset_Noisy')
-        if (len(os.listdir(f'ChineseDataset\PreparedDataset_Noisy')) == 0):
+        random.seed(42)
+
+        if (not os.path.exists('ChineseDataset\PreparedDataset_Noisy')):
+            os.mkdir('ChineseDataset\PreparedDataset_Noisy')
+        if (len(os.listdir('ChineseDataset\PreparedDataset_Noisy')) == 0):
             prepare_dataset()
+
+        self.dataset_len = len(os.listdir('ChineseDataset\PreparedDataset_Noisy'))
         
     def __getitem__(self, index):
-        if index % 2 ==0:
-            index = str(int(index/2 + 1)).zfill(4)
-            ecg1 = scipy.io.loadmat(f'ChineseDataset\PreparedDataset_Noisy\A{index}_1_clean.mat')['ECG']
-            ecg2 = scipy.io.loadmat(f'ChineseDataset\PreparedDataset_Noisy\A{index}_2_noisy.mat')['ECG']
+        if index % 2 == 0:
+            index = int(index / 2)
+            rand_index = int(random.randint(0, self.dataset_len - 1) / 2)
+            while rand_index == index: 
+                rand_index = int(random.randint(0, self.dataset_len - 1) / 2)
+
+            ecg1 = scipy.io.loadmat(f'ChineseDataset\PreparedDataset_Noisy\{index}_clean.mat')['ECG']
+            ecg2 = scipy.io.loadmat(f'ChineseDataset\PreparedDataset_Noisy\{rand_index}_clean.mat')['ECG']
             label = 0.
         else:
-            index = str(math.ceil(index/2)).zfill(4)
-            rand_index = str(random.randint(1, 2000)).zfill(4)
-            while index != rand_index:
-                rand_index = str(random.randint(1, 2000)).zfill(4)
-            ecg1 = scipy.io.loadmat(f'ChineseDataset\PreparedDataset_Noisy\A{index}_1_clean.mat')['ECG']
-            ecg2 = scipy.io.loadmat(f'ChineseDataset\PreparedDataset_Noisy\A{rand_index}_2_noisy.mat')['ECG']
+            index = int(index / 2)
+            ecg1 = scipy.io.loadmat(f'ChineseDataset\PreparedDataset_Noisy\{index}_clean.mat')['ECG']
+            ecg2 = scipy.io.loadmat(f'ChineseDataset\PreparedDataset_Noisy\{index}_noisy.mat')['ECG']
             label = 1.
 
         return (
@@ -36,4 +41,4 @@ class NoisyPairsDataset(Dataset):
             ), torch.as_tensor((label), dtype=torch.float32)
 
     def __len__(self):
-        return 4000
+        return self.dataset_len
