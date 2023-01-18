@@ -9,17 +9,22 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 from Chinese_PairsDataset import PairsDataset as DS_Chinese
 from ECG5000_PairsDataset import PairsDataset as DS_5000
+from NoisyDataset import NoisyPairsDataset
 
-data = scipy.io.arff.loadarff('ECG5000\ECG5000.arff')
-df = pd.DataFrame(data[0])
-aa = np.expand_dims(np.array(df.iloc[0, :-1]), 0)
-print(aa)
+ds_noisy = NoisyPairsDataset()
+pair, label = ds_noisy.__getitem__(9)
+fig, axs = plt.subplots(2)
+axs[0].plot(pair[0][0])
+axs[1].plot(pair[1][0])
+print(label)
+print(pair[1][0].shape)
+plt.show()
 
 # chinese_dtst_reference = pd.read_csv('ChineseDataset\REFERENCE.csv', delimiter=',')
 # # print(chinese_dtst_reference)
 # ecg = scipy.io.loadmat('ChineseDataset\TrainingSet1\A0202.mat')['ECG'][0][0][2]
-# ecg = scipy.io.loadmat('ChineseDataset\TrainingSet1\A1445.mat')['ECG'][0][0][2]
-# plt.plot(ecg[6])
+# ecg = scipy.io.loadmat('ChineseDataset\TrainingSet1\A1445.mat')['ECG'][0][0][2][:, :3000]
+# plt.plot(ecg[1])
 # plt.show()
 
 # DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

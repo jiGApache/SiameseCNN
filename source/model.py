@@ -49,21 +49,21 @@ class Siamese(nn.Module):
             nn.Conv1d(64, 64, kernel_size=4),
             nn.BatchNorm1d(64),
             nn.LeakyReLU(negative_slope=self.slope),
-            nn.MaxPool1d(kernel_size=10)
+            nn.MaxPool1d(kernel_size=8)
         )
 
-        self.conv4 = nn.Sequential(
-            nn.Dropout(0.2),
-            nn.Conv1d(64, 48, kernel_size=4),
-            nn.BatchNorm1d(48),
-            nn.LeakyReLU(negative_slope=self.slope),
-            nn.MaxPool1d(kernel_size=4)
-        )
+        # self.conv4 = nn.Sequential(
+        #     nn.Dropout(0.2),
+        #     nn.Conv1d(64, 48, kernel_size=4),
+        #     nn.BatchNorm1d(48),
+        #     nn.LeakyReLU(negative_slope=self.slope),
+        #     nn.MaxPool1d(kernel_size=4)
+        # )
 
         self.dense = nn.Sequential(
             nn.Flatten(start_dim=1),
             # nn.Linear(2 * 64, 128),
-            nn.Linear(2 * 48, 128),
+            nn.Linear(2 * 64, 128),
             nn.Tanh()
         )
 
@@ -77,7 +77,7 @@ class Siamese(nn.Module):
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
-        x = self.conv4(x)
+        # x = self.conv4(x)
         # x = self.conv5(x)
         # x = self.conv6(x)
         # x = self.conv7(x)

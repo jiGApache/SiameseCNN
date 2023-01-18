@@ -1,6 +1,7 @@
 ChineseDataset/PreparedDataset_mean/
 ChineseDataset/PreparedDataset_cyclic_repeat/
 ChineseDataset/TrainingSet1/
+ChineseDataset/PreparedDataset_Noisy/
 LobachevskyDataset/
 history/
 source/test.py

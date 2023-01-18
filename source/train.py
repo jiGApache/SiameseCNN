@@ -1,5 +1,6 @@
 from Chinese_PairsDataset import PairsDataset as DS_Chinese
 from ECG5000_PairsDataset import PairsDataset as DS_5000
+from NoisyDataset import NoisyPairsDataset as DS_Noisy
 import numpy as np
 from model import Siamese
 import torch
@@ -13,7 +14,7 @@ import os
 #########################################################
 SEED = 42
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 100
+EPOCHS = 15
 LR = 0.001
 # LOSS_FUNCTION = nn.BCEWithLogitsLoss().cuda()
 LOSS_FUNCTION = nn.BCELoss().cuda()
@@ -51,8 +52,9 @@ def show_history(history):
     plt.show()
 
 
-full_ds = DS_Chinese(device=DEVICE, fill_with_type='mean')
+# full_ds = DS_Chinese(device=DEVICE, fill_with_type='mean')
 # full_ds = DS_5000()
+full_ds = DS_Noisy()
 train_size = int(0.8 * len(full_ds))
 test_size = len(full_ds) - train_size
 train_ds, test_ds = random_split(full_ds, [train_size, test_size], generator=torch.Generator().manual_seed(SEED))
