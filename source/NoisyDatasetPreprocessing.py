@@ -48,9 +48,21 @@ def prepare_dataset(path='ChineseDataset\\'):
         for fragment_index in range(total_fragments_in_ecg):
             scipy.io.savemat(f'{path}PreparedDataset_Noisy\{bias + fragment_index}_clean.mat', {'ECG': recording[0][:, STEP_SIZE * fragment_index:STEP_SIZE * fragment_index + FRAGMENT_SIZE]})
             
-            noise = np.random.normal(0, channel_stds[0] * 0.1, [1, FRAGMENT_SIZE])
+            #Gaussian noise
+            noise = np.random.normal(0, channel_stds[0] * 0.2, [1, FRAGMENT_SIZE])
             for j in range(1, 12):
                 noise = np.concatenate((noise, np.random.normal(0, channel_stds[j] * 0.1, [1, FRAGMENT_SIZE])), axis=0)
+
+            #Baseline wander
+            L = FRAGMENT_SIZE
+            x = np.linspace(0, L, L)
+            A = np.random.uniform(0.05, 0.4)
+            T = 2 * L
+            PHI = np.random.uniform(0, 2 * math.pi)
+            wander = []
+            for j in x:
+                wander.append(A * np.cos(2 * math.pi * (j/T) + PHI))
+            noise = np.sum([noise, wander], axis=0)
 
             scipy.io.savemat(f'{path}PreparedDataset_Noisy\{bias + fragment_index}_noisy.mat', {'ECG': recording[0][:, STEP_SIZE * fragment_index:STEP_SIZE * fragment_index + FRAGMENT_SIZE] + noise})
         

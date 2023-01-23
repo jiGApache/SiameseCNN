@@ -7,24 +7,44 @@ import math
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
+from model import Siamese
 from Chinese_PairsDataset import PairsDataset as DS_Chinese
 from ECG5000_PairsDataset import PairsDataset as DS_5000
 from NoisyDataset import NoisyPairsDataset
 
 ds_noisy = NoisyPairsDataset()
-pair, label = ds_noisy.__getitem__(9)
+pair, label = ds_noisy.__getitem__(43)
+
+model = Siamese()
+model.load_state_dict(torch.load('nets\SCNN.pth'))
+
+in1 = pair[0][None, :, :]
+in2 = pair[1][None, :, :]
+
+model.train(False)
+print('predicted: ', model(in1, in2).item())
+print('true: ', label.item())
+
 fig, axs = plt.subplots(2)
 axs[0].plot(pair[0][0])
 axs[1].plot(pair[1][0])
-print(label)
-print(pair[1][0].shape)
 plt.show()
 
 # chinese_dtst_reference = pd.read_csv('ChineseDataset\REFERENCE.csv', delimiter=',')
-# # print(chinese_dtst_reference)
-# ecg = scipy.io.loadmat('ChineseDataset\TrainingSet1\A0202.mat')['ECG'][0][0][2]
-# ecg = scipy.io.loadmat('ChineseDataset\TrainingSet1\A1445.mat')['ECG'][0][0][2][:, :3000]
-# plt.plot(ecg[1])
+
+# ecg = scipy.io.loadmat('ChineseDataset\TrainingSet1\A1445.mat')['ECG'][0][0][2]
+# L = len(ecg[0])
+# x = np.linspace(0, L, L)
+# A = np.random.uniform(0.05, 0.4)
+# T = 2 * L
+# noise = np.concatenate((np.zeros((1, L)), np.zeros((1, L))), axis=0)
+# wander = []
+# PHI = np.random.uniform(0, 2 * math.pi)
+# for i in x:
+#     wander.append(A * np.cos(2 * math.pi * (i/T) + PHI))
+# noise = np.sum([noise, wander], axis=0)
+# print(noise)
+# plt.plot(ecg[0] + noise[0])
 # plt.show()
 
 # DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
