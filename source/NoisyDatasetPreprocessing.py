@@ -56,7 +56,7 @@ def prepare_dataset(path='ChineseDataset\\'):
             #Baseline wander
             L = FRAGMENT_SIZE
             x = np.linspace(0, L, L)
-            A = np.random.uniform(0.05, 0.4)
+            A = np.random.uniform(0.15, 0.6)
             T = 2 * L
             PHI = np.random.uniform(0, 2 * math.pi)
             wander = []
