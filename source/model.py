@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+torch.manual_seed(42)
+
 class Siamese(nn.Module):
 
     def __init__(self):
@@ -63,8 +65,8 @@ class Siamese(nn.Module):
         self.dense = nn.Sequential(
             nn.Flatten(start_dim=1),
             # nn.Linear(2 * 64, 128),
-            nn.Linear(2 * 64, 128)#,
-            # nn.Tanh()
+            nn.Linear(2 * 64, 128),
+            nn.Tanh()
         )
 
         self.classifier = nn.Sequential(

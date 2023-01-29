@@ -15,7 +15,7 @@ import random
 #########################################################
 SEED = 42
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 15
+EPOCHS = 5
 LR = 0.001
 # LOSS_FUNCTION = nn.BCEWithLogitsLoss().cuda()
 LOSS_FUNCTION = nn.BCELoss().cuda()
@@ -91,6 +91,7 @@ def train_epoch():
 
         # with torch.autocast(device_type='cuda', dtype=torch.float16):
         out = torch.reshape(model(TS1, TS2), (-1,))
+        if torch.isnan(out).count_nonzero() > 0: print(out)
         loss = LOSS_FUNCTION(out, label)
 
         epoch_loss += loss.item()
@@ -150,8 +151,6 @@ if __name__ == '__main__':
         history['test_accuracies'].append(test_acc)
 
         print(f'Epoch: {epoch+1}\n\tTrain accuracy: {train_acc:.5f} -- Train loss: {train_loss:.5f}\n\tTest accuracy:  {test_acc:.5f} -- Test loss:  {test_loss:.5f}\n\n')
-
-        if test_acc > 0.99: break
             
     if not os.path.exists('nets'):
         os.mkdir('nets')

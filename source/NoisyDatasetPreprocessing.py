@@ -16,7 +16,7 @@ total_data = []
 def prepare_dataset(path='ChineseDataset\\'):
 
     for i in range(dataset_size):
-        ecg = scipy.io.loadmat('ChineseDataset\TrainingSet1\\' + df['Recording'][i] + '.mat')['ECG'][0][0][2]#[:, 100:-100]
+        ecg = scipy.io.loadmat('ChineseDataset\TrainingSet1\\' + df['Recording'][i] + '.mat')['ECG'][0][0][2]
        
         ### Filtering EKG
         ecg = filter_ecg(ecg)
@@ -30,13 +30,18 @@ def prepare_dataset(path='ChineseDataset\\'):
     print("Filtering done! Starting channel-wise ECG normalization...")
 
 
-    ### Channel-wise normalization
+    ## Channel-wise normalization
     channel_means, channel_stds = get_channel_means_stds(total_data)
     for i, recording in enumerate(total_data):
         for j in range(12):
             recording[0][j] = (recording[0][j] - channel_means[j]) / channel_stds[j]
         print_progressBar(i+1, dataset_size, prefix='Normalizing ECG:', length=50)
 
+    # mins, maxs = get_channel_mins_maxs(total_data)
+    # for i, recording in enumerate(total_data):
+    #     for j in range(12):
+    #         recording[0][j] = 2 * (recording[0][j] - np.min(recording[0][j])) / (np.max(recording[0][j]) - np.min(recording[0][j])) - 1
+    #     print_progressBar(i+1, dataset_size, prefix='Normalizing ECG:', length=50)
 
     print(f"Normaization done! Saving data to {path}PreparedDataset_Noisy\\")
 
@@ -49,15 +54,15 @@ def prepare_dataset(path='ChineseDataset\\'):
             scipy.io.savemat(f'{path}PreparedDataset_Noisy\{bias + fragment_index}_clean.mat', {'ECG': recording[0][:, STEP_SIZE * fragment_index:STEP_SIZE * fragment_index + FRAGMENT_SIZE]})
             
             #Gaussian noise
-            noise = np.random.normal(0, channel_stds[0] * 0.2, [1, FRAGMENT_SIZE])
+            noise = np.random.normal(0, 0.01, [1, FRAGMENT_SIZE])
             for j in range(1, 12):
-                noise = np.concatenate((noise, np.random.normal(0, channel_stds[j] * 0.1, [1, FRAGMENT_SIZE])), axis=0)
+                noise = np.concatenate((noise, np.random.normal(0, 0.01, [1, FRAGMENT_SIZE])), axis=0)
 
             #Baseline wander
             L = FRAGMENT_SIZE
             x = np.linspace(0, L, L)
-            A = np.random.uniform(0.15, 0.6)
-            T = 2 * L
+            A = np.random.uniform(0.05, 0.5)
+            T = L # 2 * L
             PHI = np.random.uniform(0, 2 * math.pi)
             wander = []
             for j in x:
@@ -89,17 +94,37 @@ def get_channel_means_stds(total_data):
         regular_sum = 0
         squared_sum = 0
 
-        for element in channel:
-            counter += len(element)
-            regular_sum += sum(element)
-        for element in channel:
-            squared_sum += sum(pow(element - regular_sum / counter, 2))
+        for ecg_lead in channel:
+            counter += len(ecg_lead)
+            regular_sum += sum(ecg_lead)
+        for ecg_lead in channel:
+            squared_sum += sum(pow(ecg_lead - regular_sum / counter, 2))
 
         means.append(regular_sum / counter)
-        stds.append(math.sqrt(squared_sum / (counter - 1)))
+        stds.append(math.sqrt(squared_sum / counter))
+        # stds.append(math.sqrt(squared_sum / (counter - 1)))
 
     return means, stds
 
+def get_channel_mins_maxs(total_data):
+    channels_of_12 = [[],[],[],[],[],[],[],[],[],[],[],[]]
+    for recording in total_data:
+        for j in range(12):
+            channels_of_12[j].append(recording[0][j])
+
+    mins = []
+    maxs = []
+
+    for channel in channels_of_12:
+        loc_mins = []
+        loc_maxs = []
+        for ecg in channel:
+            loc_mins.append(np.min(ecg))
+            loc_maxs.append(np.max(ecg))
+        mins.append(np.min(loc_mins))
+        maxs.append(np.min(loc_maxs))
+    
+    return mins, maxs
 
 def filter_ecg(ekg):
     struct1 = np.ones((ekg.shape[0], 6)) / 5
