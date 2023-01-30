@@ -13,17 +13,17 @@ from ECG5000_PairsDataset import PairsDataset as DS_5000
 from NoisyDataset import NoisyPairsDataset
 
 ds_noisy = NoisyPairsDataset()
-pair, label = ds_noisy.__getitem__(43)
+pair, label = ds_noisy.__getitem__(1)
 
-model = Siamese()
-model.load_state_dict(torch.load('nets\SCNN.pth'))
+# model = Siamese()
+# model.load_state_dict(torch.load('nets\SCNN.pth'))
 
-in1 = pair[0][None, :, :]
-in2 = pair[1][None, :, :]
+# in1 = pair[0][None, :, :]
+# in2 = pair[1][None, :, :]
 
-model.train(False)
-print('predicted: ', model(in1, in2).item())
-print('true: ', label.item())
+# model.train(False)
+# print('predicted: ', model(in1, in2).item())
+# print('true: ', label.item())
 
 fig, axs = plt.subplots(2)
 axs[0].plot(pair[0][0])

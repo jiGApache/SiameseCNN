@@ -22,8 +22,8 @@ class FewShotDataset():
     def __init__(self, shot=3):
         self.shot = shot
 
-        if not os.path.exists('GeorgiaDataset\META_DATA.csv'):
-            self.gather_dataset_info()
+        # if not os.path.exists('GeorgiaDataset\META_DATA.csv'):
+        #     self.gather_dataset_info()
         
         # self.df = pd.read_csv('GeorgiaDataset\META_DATA.csv', index_col='diagnosis')
         self.df = pd.read_csv('ChineseDataset\REFERENCE.csv')
@@ -135,11 +135,11 @@ class FewShotDataset():
             ECGs[i] = self.filter_ecg(ECGs[i])
             self.print_progressBar(i+1, len(ECGs), prefix='Filtering ECG: ', length=50)
 
-        means, stds = self.get_channel_means_stds()
-        print(means)
-        print(stds)
-        # means = [0.0016, 0.0003, 0.0006, 0.0009, 0.0017, 0.0005, -0.0020, -0.0008, 0.0005, 0.0009, -1.4044e-05, 0.0003]
-        # stds = [1.0365105173338283, 1.0212978097844168, 1.028844629063083, 1.0287473539964986, 1.0416054262597099, 1.0228705546648325, 1.021233960122595, 1.0075333082879048, 1.0084018610427552, 1.021604512664429, 1.0291869595234864, 1.0514313909410649]
+        # means, stds = self.get_channel_means_stds()
+        # print('means: ', means)
+        # print('stds: ', stds)
+        means = [0.0016, 0.0003, 0.0006, 0.0009, 0.0017, 0.0005, -0.0020, -0.0008, 0.0005, 0.0009, -1.4043e-05, 0.0003]
+        stds = [1.0365105748389303, 1.0212978097844168, 1.028844629063083, 1.0287474119355475, 1.0416054262597099, 1.022870612936764, 1.0212340184879114, 1.0075333082879048, 1.0084018610427552, 1.0216046293527181, 1.029187017437787, 1.0514314476301114]
         for i in range(len(ECGs)):
             new_ecg = []
             for k in range(12):
@@ -182,8 +182,8 @@ class FewShotDataset():
             for element in channel:
                 squared_sum += sum(pow(element - regular_sum / counter, 2))
 
-            means.append(regular_sum / counter)
-            stds.append(math.sqrt(squared_sum / (counter - 1)))
+            means.append(regular_sum.item() / counter)
+            stds.append(math.sqrt(squared_sum / counter))
 
         return means, stds
 
