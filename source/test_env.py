@@ -12,18 +12,22 @@ from Chinese_PairsDataset import PairsDataset as DS_Chinese
 from ECG5000_PairsDataset import PairsDataset as DS_5000
 from NoisyDataset import NoisyPairsDataset
 
-ds_noisy = NoisyPairsDataset()
-pair, label = ds_noisy.__getitem__(1)
+ds_noisy = NoisyPairsDataset(WITH_ROLL=True)
+pair, label = ds_noisy.__getitem__(11) # Different but looks same: 8, 10
 
-# model = Siamese()
-# model.load_state_dict(torch.load('nets\SCNN.pth'))
+# tensor = torch.empty(2800)
+# for i in range(5, 15):
+#     tensor = torch.cat((tensor, ds_noisy.__getitem__(i)[0][0][2]))
 
-# in1 = pair[0][None, :, :]
-# in2 = pair[1][None, :, :]
+model = Siamese()
+model.load_state_dict(torch.load('nets\SCNN.pth'))
 
-# model.train(False)
-# print('predicted: ', model(in1, in2).item())
-# print('true: ', label.item())
+in1 = pair[0][None, :, :]
+in2 = pair[1][None, :, :]
+
+model.train(False)
+print('predicted: ', model(in1, in2).item())
+print('true: ', label.item())
 
 fig, axs = plt.subplots(2)
 axs[0].plot(pair[0][0])

@@ -13,7 +13,7 @@ df = df.loc[df['Recording'] <= 'A2000'].reset_index(drop=True)
 dataset_size = len(df)
 total_data = []
 
-def prepare_dataset(path='ChineseDataset\\'):
+def prepare_dataset(path='ChineseDataset\PreparedDataset_Noisy\\'):
 
     for i in range(dataset_size):
         ecg = scipy.io.loadmat('ChineseDataset\TrainingSet1\\' + df['Recording'][i] + '.mat')['ECG'][0][0][2]
@@ -43,7 +43,7 @@ def prepare_dataset(path='ChineseDataset\\'):
     #         recording[0][j] = 2 * (recording[0][j] - np.min(recording[0][j])) / (np.max(recording[0][j]) - np.min(recording[0][j])) - 1
     #     print_progressBar(i+1, dataset_size, prefix='Normalizing ECG:', length=50)
 
-    print(f"Normaization done! Saving data to {path}PreparedDataset_Noisy\\")
+    print(f"Normaization done! Saving data to {path}")
 
 
     bias = 0
@@ -51,12 +51,12 @@ def prepare_dataset(path='ChineseDataset\\'):
         total_fragments_in_ecg = math.floor((len(recording[0][0]) - FRAGMENT_SIZE) / STEP_SIZE) + 1 # Convolution formula
         
         for fragment_index in range(total_fragments_in_ecg):
-            scipy.io.savemat(f'{path}PreparedDataset_Noisy\{bias + fragment_index}_clean.mat', {'ECG': recording[0][:, STEP_SIZE * fragment_index:STEP_SIZE * fragment_index + FRAGMENT_SIZE]})
+            scipy.io.savemat(f'{path}{bias + fragment_index}_clean.mat', {'ECG': recording[0][:, STEP_SIZE * fragment_index:STEP_SIZE * fragment_index + FRAGMENT_SIZE]})
             
             #Gaussian noise
-            noise = np.random.normal(0, channel_stds[0]*0.4, [1, FRAGMENT_SIZE])
+            noise = np.random.normal(0, channel_stds[0]*0.25, [1, FRAGMENT_SIZE])
             for j in range(1, 12):
-                noise = np.concatenate((noise, np.random.normal(0, channel_stds[j]*0.4, [1, FRAGMENT_SIZE])), axis=0)
+                noise = np.concatenate((noise, np.random.normal(0, channel_stds[j]*0.25, [1, FRAGMENT_SIZE])), axis=0)
 
             #Baseline wander
             L = FRAGMENT_SIZE
@@ -67,11 +67,13 @@ def prepare_dataset(path='ChineseDataset\\'):
             wander = []
             for j in x:
                 wander.append(A * np.cos(2 * math.pi * (j/T) + PHI))
-            noise = np.sum([noise, wander], axis=0)
+            noise = np.sum([noise, np.array(wander)], axis=0)
 
-            roll = np.random.randint(-500, 500)
-
-            scipy.io.savemat(f'{path}PreparedDataset_Noisy\{bias + fragment_index}_noisy.mat', {'ECG': np.roll(recording[0][:, STEP_SIZE * fragment_index:STEP_SIZE * fragment_index + FRAGMENT_SIZE] + noise, roll, axis=1)})
+            if 'Rolled' in path:
+                roll = np.random.randint(-1500, 1500)
+                scipy.io.savemat(f'{path}{bias + fragment_index}_noisy.mat', {'ECG': np.roll(recording[0][:, STEP_SIZE * fragment_index:STEP_SIZE * fragment_index + FRAGMENT_SIZE] + noise, roll, axis=1)})
+            else:
+                scipy.io.savemat(f'{path}{bias + fragment_index}_noisy.mat', {'ECG': recording[0][:, STEP_SIZE * fragment_index:STEP_SIZE * fragment_index + FRAGMENT_SIZE] + noise})
         
         bias += total_fragments_in_ecg
 

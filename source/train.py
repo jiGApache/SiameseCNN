@@ -15,7 +15,7 @@ import random
 #########################################################
 SEED = 42
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 5
+EPOCHS = 3
 LR = 0.001
 # LOSS_FUNCTION = nn.BCEWithLogitsLoss().cuda()
 LOSS_FUNCTION = nn.BCELoss().cuda()
@@ -25,7 +25,7 @@ model = Siamese().to(DEVICE)
 # model.load_state_dict(torch.load('nets\EPOCH=100_BATCH=64_SCNN.pth'))
 optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
 # scaler = torch.cuda.amp.GradScaler()
-THRESHHOLD = 0.3
+THRESHHOLD = 0.15
 #########################################################
 
 torch.manual_seed(SEED)
@@ -59,7 +59,7 @@ def show_history(history):
 
 # full_ds = DS_Chinese(device=DEVICE, fill_with_type='mean')
 # full_ds = DS_5000()
-full_ds = DS_Noisy()
+full_ds = DS_Noisy(WITH_ROLL=True)
 train_size = int(0.8 * len(full_ds))
 test_size = len(full_ds) - train_size
 train_ds, test_ds = random_split(full_ds, [train_size, test_size], generator=torch.Generator().manual_seed(SEED))
@@ -84,14 +84,11 @@ def train_epoch():
     epoch_loss = 0.0
 
     for TS_T, label in train_dl:
-
         steps_in_epoch += 1
 
         TS1, TS2, label = TS_T[0].to(DEVICE, non_blocking=True), TS_T[1].to(DEVICE, non_blocking=True), label.to(DEVICE, non_blocking=True)
-
         # with torch.autocast(device_type='cuda', dtype=torch.float16):
         out = torch.reshape(model(TS1, TS2), (-1,))
-        if torch.isnan(out).count_nonzero() > 0: print(out)
         loss = LOSS_FUNCTION(out, label)
 
         epoch_loss += loss.item()
@@ -151,7 +148,9 @@ if __name__ == '__main__':
         history['test_accuracies'].append(test_acc)
 
         print(f'Epoch: {epoch+1}\n\tTrain accuracy: {train_acc:.5f} -- Train loss: {train_loss:.5f}\n\tTest accuracy:  {test_acc:.5f} -- Test loss:  {test_loss:.5f}\n\n')
-            
+
+        if test_loss < 0.02: break
+
     if not os.path.exists('nets'):
         os.mkdir('nets')
     torch.save(model.state_dict(), 'nets\\SCNN.pth')

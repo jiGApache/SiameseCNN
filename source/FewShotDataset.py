@@ -7,6 +7,7 @@ import scipy.io
 from PreprocessingFilters import filter1
 from NoisyDataset import NoisyPairsDataset as NS_dataset
 import math
+from torch.utils.data import Dataset
 
 
 random.seed(42)
@@ -17,7 +18,7 @@ torch.manual_seed(42)
 # classes_to_classify = [59118001, 426783006, 111975006, 89792004, 67741000119109] # May be random
 classes_to_classify = [1, 2, 3, 5, 6]
 
-class FewShotDataset():
+class FewShotDataset(Dataset):
 
     def __init__(self, shot=3):
         self.shot = shot
@@ -33,6 +34,31 @@ class FewShotDataset():
         if not os.path.exists(f'FewShot(Shot={self.shot}\\test)'):
             os.makedirs(f'FewShot(Shot={self.shot})\\test', exist_ok=True)
 
+    def __getitem__(self, index):
+
+        _, ECGs = self.get_train_data()
+
+        if index % 2 == 0:
+            index = int(index / 2)
+            offset = int(index / self.shot)
+            rand_index = int(np.random.randint(0, self.__len__()) / 2)
+            while rand_index == index or (rand_index >= self.shot * offset and rand_index < self.shot * (offset + 1)): 
+                rand_index = int(np.random.randint(0, self.__len__()) / 2)
+            label = 0.
+        else:
+            index = int(index / 2)
+            offset = int(index / self.shot)
+            rand_index = np.random.randint(self.shot * offset, self.shot * (offset + 1))
+            label = 1.
+
+        return (
+                ECGs[index],
+                ECGs[rand_index]
+            ), torch.as_tensor((label), dtype=torch.float32)
+
+    def __len__(self):
+        return self.shot * len(classes_to_classify) * 2
+
     def get_train_data(self):
 
         ECGs = []
@@ -43,7 +69,7 @@ class FewShotDataset():
                 ECGs.append(scipy.io.loadmat(f'ChineseDataset\TrainingSet1\{df_with_class.iloc[i]["Recording"]}.mat')['ECG'][0][0][2][:, :3000])
         diagnoses = []
         for diag in classes_to_classify:
-            for j in range(0, self.shot):
+            for _ in range(0, self.shot):
                 diagnoses.append(diag)
 
 
@@ -60,7 +86,6 @@ class FewShotDataset():
         
         return diagnoses, ECGs
 
-
     def get_test_data(self):
 
         ECGs = []
@@ -71,7 +96,7 @@ class FewShotDataset():
                 ECGs.append(scipy.io.loadmat(f'ChineseDataset\TrainingSet1\{df_with_class.iloc[i]["Recording"]}.mat')['ECG'][0][0][2][:, :3000])
         diagnoses = []
         for diag in classes_to_classify:
-            for j in range(self.shot, 150):
+            for _ in range(self.shot, 150):
                 diagnoses.append(diag)
 
 
@@ -138,7 +163,7 @@ class FewShotDataset():
         # means, stds = self.get_channel_means_stds()
         # print('means: ', means)
         # print('stds: ', stds)
-        means = [0.0016, 0.0003, 0.0006, 0.0009, 0.0017, 0.0005, -0.0020, -0.0008, 0.0005, 0.0009, -1.4043e-05, 0.0003]
+        means = [0.0015658936968204209, 0.0003386128617542236, 0.000555396501027919, 0.0008853991733840872, 0.0016926736897737151, 0.0004599046159902049, -0.00199242674636469, -0.0008172775012238437, 0.0004998249299719888, 0.0009050904354688583, -1.4042607983203567e-05, 0.00033259534404964965]
         stds = [1.0365105748389303, 1.0212978097844168, 1.028844629063083, 1.0287474119355475, 1.0416054262597099, 1.022870612936764, 1.0212340184879114, 1.0075333082879048, 1.0084018610427552, 1.0216046293527181, 1.029187017437787, 1.0514314476301114]
         for i in range(len(ECGs)):
             new_ecg = []
