@@ -1,12 +1,5 @@
-ChineseDataset/PreparedDataset_mean/
-ChineseDataset/PreparedDataset_cyclic_repeat/
-ChineseDataset/TrainingSet1/
-ChineseDataset/PreparedDataset_Noisy*
-LobachevskyDataset/
-GeorgiaDataset/
-FewShot*
+Data/
 history/
 source/test.py
 source/test_env.py
-source/__pycache__/
-source/test_env.py
+__pycache__/
