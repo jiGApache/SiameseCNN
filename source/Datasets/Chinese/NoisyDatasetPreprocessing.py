@@ -11,7 +11,7 @@ FRAGMENT_SIZE = 2900    # or KERNEL_SIZE
 STEP_SIZE = 1500        # or STRIDE
 df = pd.read_csv('Data\ChineseDataset\REFERENCE.csv', delimiter=',')
 df = df.loc[df['Recording'] <= 'A2000'].reset_index(drop=True)
-dataset_size = 1#len(df)
+dataset_size = len(df)
 total_data = []
 
 def prepare_dataset(path='Data\ChineseDataset\PreparedDataset_Noisy\\'):

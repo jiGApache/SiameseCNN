@@ -94,3 +94,9 @@ def filter2(ECG, struct_el1, struct_el2):
         ECG = (erosion(ECG, window) + dilation(ECG, window)) / 2.
     ECG = filter1(ECG, struct_el1, struct_el2)
     return ECG
+
+def filter_ecg(ecg):
+    struct1 = np.ones((ecg.shape[0], 6)) / 5
+    struct2 = np.ones((ecg.shape[0], 45)) / 5
+    data = filter1(ecg, struct1, struct2)
+    return data

@@ -3,8 +3,8 @@ import os
 dir_path = os.path.dirname(__file__)[:os.path.dirname(__file__).rfind('\\')]
 sys.path.append(dir_path)
 
-from Datasets.Chinese_PairsDataset import PairsDataset as DS_Chinese
-from Datasets.NoisyDataset import NoisyPairsDataset as DS_Noisy
+# from Datasets.Chinese.NoisyDataset import NoisyPairsDataset as DS_Noisy
+from Datasets.Physionet.NoisyDataset import PairsDataset as DS_Noisy
 import numpy as np
 from Models.SiameseModel import Siamese
 import torch
@@ -14,12 +14,13 @@ from torch.utils.data import random_split
 import matplotlib.pyplot as plt
 import os
 import random
+import math
 
 # Hyper params
 #########################################################
 SEED = 42
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 3
+EPOCHS = 2
 LR = 0.001
 # LOSS_FUNCTION = nn.BCEWithLogitsLoss().cuda()
 LOSS_FUNCTION = nn.BCELoss().cuda()
@@ -29,13 +30,13 @@ model = Siamese().to(DEVICE)
 # model.load_state_dict(torch.load('nets\EPOCH=100_BATCH=64_SCNN.pth'))
 optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
 # scaler = torch.cuda.amp.GradScaler()
-THRESHHOLD = 0.15
+THRESHHOLD = 0.5
 #########################################################
 
 torch.manual_seed(SEED)
 random.seed(SEED)
 np.random.seed(SEED)
-# torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.benchmark = True
 
 
 def show_history(history):
@@ -60,12 +61,33 @@ def show_history(history):
 
     plt.show()
 
+def print_progressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
+        """
+        Call in a loop to create terminal progress bar
+        @params:
+            iteration   - Required  : current iteration (Int)
+            total       - Required  : total iterations (Int)
+            prefix      - Optional  : prefix string (Str)
+            suffix      - Optional  : suffix string (Str)
+            decimals    - Optional  : positive number of decimals in percent complete (Int)
+            length      - Optional  : character length of bar (Int)
+            fill        - Optional  : bar fill character (Str)
+            printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
+        """
+        percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+        filledLength = int(length * iteration // total)
+        bar = fill * filledLength + '-' * (length - filledLength)
+        print(f'\r{prefix} |{bar}| {percent}% {suffix}', end = printEnd)
+        # Print New Line on Complete
+        if iteration == total: 
+            print()
+
 
 # full_ds = DS_Chinese(device=DEVICE, fill_with_type='mean')
 # full_ds = DS_5000()
 full_ds = DS_Noisy(WITH_ROLL=True)
 train_size = int(0.8 * full_ds.__len__())
-test_size = len(full_ds) - train_size
+test_size = full_ds.__len__() - train_size
 train_ds, test_ds = random_split(full_ds, [train_size, test_size], generator=torch.Generator().manual_seed(SEED))
 train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True, generator=torch.Generator().manual_seed(SEED))
 test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True, generator=torch.Generator().manual_seed(SEED))
@@ -81,7 +103,7 @@ history = {
 correct_preds = []
 
 
-def train_epoch():
+def train_epoch(epoch_counter):
 
     steps_in_epoch = 0
     correct_predictions_in_epoch = 0
@@ -107,10 +129,12 @@ def train_epoch():
 
         del out, loss
 
+        print_progressBar(steps_in_epoch, math.ceil(train_size / BATCH_SIZE), prefix=f'{epoch_counter} Train epoch progress:', length=50)
+
     return correct_predictions_in_epoch / train_size, epoch_loss / steps_in_epoch
 
 
-def test_epoch():
+def test_epoch(epoch_counter):
     
     steps_in_epoch = 0
     correct_predictions_in_epoch = 0
@@ -128,7 +152,7 @@ def test_epoch():
         epoch_loss += loss.item()
         correct_predictions_in_epoch += (torch.abs(out - label) < THRESHHOLD).count_nonzero().item()
 
-        del out, loss
+        print_progressBar(steps_in_epoch, math.ceil(test_size / BATCH_SIZE), prefix=f'{epoch_counter} Test epoch progress:', length=50)
 
     return correct_predictions_in_epoch / test_size, epoch_loss / steps_in_epoch
 
@@ -137,12 +161,14 @@ if __name__ == '__main__':
 
     for epoch in range(EPOCHS):
 
+        epoch_counter = 1
+
         model.train(True)
-        train_acc, train_loss = train_epoch()
+        train_acc, train_loss = train_epoch(epoch_counter)
         torch.cuda.empty_cache()
 
         model.train(False)
-        test_acc, test_loss = test_epoch()
+        test_acc, test_loss = test_epoch(epoch_counter)
         torch.cuda.empty_cache()
 
         history['epochs'].append(epoch + 1)
@@ -153,7 +179,7 @@ if __name__ == '__main__':
 
         print(f'Epoch: {epoch+1}\n\tTrain accuracy: {train_acc:.5f} -- Train loss: {train_loss:.5f}\n\tTest accuracy:  {test_acc:.5f} -- Test loss:  {test_loss:.5f}\n\n')
 
-        if test_loss < 0.02: break
+        epoch_counter += 1
 
     if not os.path.exists('nets'):
         os.mkdir('nets')

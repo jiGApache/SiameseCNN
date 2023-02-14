@@ -1,6 +1,6 @@
 import os
 from torch.utils.data import Dataset
-from Datasets.NoisyDatasetPreprocessing import prepare_dataset
+from Datasets.Chinese.NoisyDatasetPreprocessing import prepare_dataset
 import scipy
 import math
 import torch

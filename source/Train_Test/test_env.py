@@ -13,29 +13,32 @@ import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
 from Models.SiameseModel import Siamese
-from Datasets.Chinese_PairsDataset import PairsDataset as DS_Chinese
-from Datasets.NoisyDataset import NoisyPairsDataset
+from Datasets.Physionet.NoisyDataset import PairsDataset
 
-# ecg1 = scipy.io.loadmat('Data\ChineseDataset\TrainingSet1\A0001.mat')['ECG'][0][0][2]
-# ecg2 = scipy.io.loadmat('Data\ChineseDataset\TrainingSet1\A0020.mat')['ECG'][0][0][2]
-# ecg3 = scipy.io.loadmat('Data\ChineseDataset\TrainingSet1\A0030.mat')['ECG'][0][0][2]
-# ecg4 = scipy.io.loadmat('Data\ChineseDataset\TrainingSet1\A0040.mat')['ECG'][0][0][2]
-# ecg5 = scipy.io.loadmat('Data\ChineseDataset\TrainingSet1\A0050.mat')['ECG'][0][0][2]
+# ecg1 = np.transpose(scipy.io.loadmat('Data\PTB-XL\Train\Clean\\00010.mat')['ECG'])
+# ecg2 = np.transpose(scipy.io.loadmat('Data\PTB-XL\Train\Clean\\00020.mat')['ECG'])
+# ecg3 = np.transpose(scipy.io.loadmat('Data\PTB-XL\Train\Clean\\00030.mat')['ECG'])
+# ecg4 = np.transpose(scipy.io.loadmat('Data\PTB-XL\Train\Clean\\00050.mat')['ECG'])
+ecg5 = np.transpose(scipy.io.loadmat('Data\ChineseDataset\TrainingSet1\A0149.mat')['ECG'])[0][0][2]
+# ecg1 = scipy.io.loadmat('Data\PTB-XL\Train\Filtered\\00010.mat')['ECG']
+# ecg2 = scipy.io.loadmat('Data\PTB-XL\Train\Filtered\\00020.mat')['ECG']
+# ecg3 = scipy.io.loadmat('Data\PTB-XL\Train\Filtered\\00030.mat')['ECG']
+# ecg4 = scipy.io.loadmat('Data\PTB-XL\Train\Filtered\\00050.mat')['ECG']
+# ecg5 = scipy.io.loadmat('Data\PTB-XL\Train\Filtered\\00060.mat')['ECG']
+# ecg1 = scipy.io.loadmat('Data\PTB-XL\Train\Prepared_Noisy\\20_clean.mat')['ECG']
+# ecg2 = scipy.io.loadmat('Data\PTB-XL\Train\Prepared_Noisy\\40_clean.mat')['ECG']
+# ecg3 = scipy.io.loadmat('Data\PTB-XL\Train\Prepared_Noisy\\60_clean.mat')['ECG']
+# ecg4 = scipy.io.loadmat('Data\PTB-XL\Train\Prepared_Noisy\\100_clean.mat')['ECG']
+# ecg5 = scipy.io.loadmat('Data\PTB-XL\Train\Prepared_Noisy\\120_clean.mat')['ECG']
 # ecg = np.concatenate((ecg1[0], ecg2[0]))
-# ecg = np.concatenate((ecg, ecg2[0]))
 # ecg = np.concatenate((ecg, ecg3[0]))
 # ecg = np.concatenate((ecg, ecg4[0]))
 # ecg = np.concatenate((ecg, ecg5[0]))
-# plt.plot(ecg)
-# plt.show()
+plt.plot(ecg5[0])
+plt.show()
 
-# tensor = torch.empty(0)
-# for i in range(5, 15):
-#     tensor = torch.cat((tensor, ds_noisy.__getitem__(i)[0][0][2]))
-# plt.plot(tensor)
-# plt.show()
-ds_noisy = NoisyPairsDataset(WITH_ROLL=True)
-pair, label = ds_noisy.__getitem__(3) # Different but looks same: 8, 10
+# ds_noisy = PairsDataset(WITH_ROLL=True)
+# pair, label = ds_noisy.__getitem__(12) # Different but looks same: 8, 10
 
 # model = Siamese()
 # model.load_state_dict(torch.load('nets\SCNN.pth'))
@@ -47,10 +50,10 @@ pair, label = ds_noisy.__getitem__(3) # Different but looks same: 8, 10
 # print('predicted: ', model(in1, in2).item())
 # print('true: ', label.item())
 
-fig, axs = plt.subplots(2)
-axs[0].plot(pair[0][0])
-axs[1].plot(pair[1][0])
-plt.show()
+# fig, axs = plt.subplots(2)
+# axs[0].plot(pair[0][0])
+# axs[1].plot(pair[1][0])
+# plt.show()
 
 
 # chinese_dtst_reference = pd.read_csv('ChineseDataset\REFERENCE.csv', delimiter=',')
