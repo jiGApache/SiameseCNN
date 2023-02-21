@@ -1,7 +1,8 @@
 import os
 import pandas as pd
 import scipy
-from Filtering.PreprocessingFilters import filter1
+from Filtering.Neurokit2Filters import filter_ecg
+# from Filtering.PreprocessingFilters import filter_ecg
 import numpy as np
 import math
 
@@ -51,12 +52,6 @@ def prepare_dataset(path='Data\ChineseDataset\PreparedDataset_Noisy\\'):
         for j in range(12):
             recording[0][j] = (recording[0][j] - channel_means[j]) / channel_stds[j]
         print_progressBar(i+1, dataset_size, prefix='Normalizing ECG:', length=50)
-
-    # mins, maxs = get_channel_mins_maxs(total_data)
-    # for i, recording in enumerate(total_data):
-    #     for j in range(12):
-    #         recording[0][j] = 2 * (recording[0][j] - np.min(recording[0][j])) / (np.max(recording[0][j]) - np.min(recording[0][j])) - 1
-    #     print_progressBar(i+1, dataset_size, prefix='Normalizing ECG:', length=50)
 
     print(f"Normaization done! Saving data to {path}")
 
@@ -121,7 +116,6 @@ def get_channel_means_stds(total_data):
 
         means.append(regular_sum / counter)
         stds.append(math.sqrt(squared_sum / counter))
-        # stds.append(math.sqrt(squared_sum / (counter - 1)))
 
     return means, stds
 
@@ -144,12 +138,6 @@ def get_channel_mins_maxs(total_data):
         maxs.append(np.min(loc_maxs))
     
     return mins, maxs
-
-def filter_ecg(ekg):
-    struct1 = np.ones((ekg.shape[0], 6)) / 5
-    struct2 = np.ones((ekg.shape[0], 45)) / 5
-    data = filter1(ekg, struct1, struct2)[:, 50:-50]
-    return data
 
 def print_progressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
     """
