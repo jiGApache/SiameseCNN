@@ -40,10 +40,10 @@ class Siamese(nn.Module):
             nn.MaxPool1d(kernel_size=2)
         )
 
-        self.dense = nn.Sequential(
+        self.embedding = nn.Sequential(
             nn.Flatten(start_dim=1),
-            nn.Linear(2 * 32, 16)#,
-            #nn.Tanh()
+            nn.Linear(2 * 32, 16),
+            nn.Tanh()
         )
 
         self.classifier = nn.Sequential(
@@ -60,11 +60,11 @@ class Siamese(nn.Module):
         # x = self.conv5(x)
         # x = self.conv6(x)
         # x = self.conv7(x)
-        x = self.dense(x)
+        x = self.embedding(x)
         return x
 
     def forward(self, x1, x2):
-        out1 = self.forward_once(x1)
-        out2 = self.forward_once(x2)
-        out = self.classifier(torch.abs(out1 - out2))
-        return out
+        # out1 = self.forward_once(x1)
+        # out2 = self.forward_once(x2)
+        # out = self.classifier(torch.abs(out1 - out2))
+        return self.forward_once(x1), self.forward_once(x2)
