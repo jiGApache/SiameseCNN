@@ -29,36 +29,6 @@ class FewShotDataset(Dataset):
         # self.df = pd.read_csv('Data\GeorgiaDataset\META_DATA.csv', index_col='diagnosis')
         self.df = pd.read_csv('Data\ChineseDataset\REFERENCE.csv')
 
-        if not os.path.exists(f'Data\ChineseDataset\FewShot(Shot={self.shot}\\train)'):
-            os.makedirs(f'Data\ChineseDataset\FewShot(Shot={self.shot})\\train', exist_ok=True)
-        if not os.path.exists(f'Data\ChineseDataset\FewShot(Shot={self.shot}\\test)'):
-            os.makedirs(f'Data\ChineseDataset\FewShot(Shot={self.shot})\\test', exist_ok=True)
-
-    def __getitem__(self, index):
-
-        _, ECGs = self.get_train_data()
-
-        if index % 2 == 0:
-            index = int(index / 2)
-            offset = int(index / self.shot)
-            rand_index = int(np.random.randint(0, self.__len__()) / 2)
-            while rand_index == index or (rand_index >= self.shot * offset and rand_index < self.shot * (offset + 1)): 
-                rand_index = int(np.random.randint(0, self.__len__()) / 2)
-            label = 0.
-        else:
-            index = int(index / 2)
-            offset = int(index / self.shot)
-            rand_index = np.random.randint(self.shot * offset, self.shot * (offset + 1))
-            label = 1.
-
-        return (
-                ECGs[index],
-                ECGs[rand_index]
-            ), torch.as_tensor((label), dtype=torch.float32)
-
-    def __len__(self):
-        return self.shot * len(classes_to_classify) * 2
-
     def get_train_data(self):
 
         ECGs = []
@@ -72,16 +42,10 @@ class FewShotDataset(Dataset):
             for _ in range(0, self.shot):
                 diagnoses.append(diag)
 
-
-        if (len(os.listdir(f'Data\ChineseDataset\FewShot(Shot={self.shot})\\train')) == 0):
-            ECGs = self.prepare_ECG(ECGs)
-            self.save_to_dir(f'Data\ChineseDataset\FewShot(Shot={self.shot})\\train', ECGs)
-        else:
-            ECGs = self.read_from_dir(f'Data\ChineseDataset\FewShot(Shot={self.shot})\\train')
-
+        ECGs = self.prepare_ECG(ECGs)
 
         for i in range(len(ECGs)):
-            ECGs[i] = torch.as_tensor(ECGs[i], dtype=torch.float32)
+            ECGs[i] = torch.as_tensor(ECGs[i][None, :, :], dtype=torch.float32)
 
         
         return diagnoses, ECGs
@@ -99,16 +63,10 @@ class FewShotDataset(Dataset):
             for _ in range(self.shot, 150):
                 diagnoses.append(diag)
 
-
-        if (len(os.listdir(f'Data\ChineseDataset\FewShot(Shot={self.shot})\\test')) == 0):
-            ECGs = self.prepare_ECG(ECGs)
-            self.save_to_dir(f'Data\ChineseDataset\FewShot(Shot={self.shot})\\test', ECGs)
-        else:
-            ECGs = self.read_from_dir(f'Data\ChineseDataset\FewShot(Shot={self.shot})\\test')
-
+        ECGs = self.prepare_ECG(ECGs)
 
         for i in range(len(ECGs)):
-            ECGs[i] = torch.as_tensor(ECGs[i], dtype=torch.float32)
+            ECGs[i] = torch.as_tensor(ECGs[i][None, :, :], dtype=torch.float32)
 
 
         return diagnoses, ECGs
@@ -163,7 +121,7 @@ class FewShotDataset(Dataset):
         stds = [0.17314126577697408, 0.1909722425382492, 0.17436245266720773, 0.16158359746907913, 0.14613192801879915, 0.16186289945417426, 0.30696264143578034, 0.3423613932813311, 0.36725664334713926, 0.3727159624619992, 0.41711148904861833, 0.48217168988897435]
         for i in range(len(ECGs)):
             new_ecg = []
-            for k in range(12):
+            for k in range(ECGs[i].shape[0]):
                 new_ecg.append((ECGs[i][k] - means[k]) / stds[k])
             new_ecg = np.array(new_ecg)
 
@@ -174,7 +132,7 @@ class FewShotDataset(Dataset):
         return ECGs
 
     def get_channel_means_stds(self):
-        dataset = NS_dataset(WITH_ROLL=True )
+        dataset = NS_dataset(WITH_ROLL=True)
         channels_of_12 = [[],[],[],[],[],[],[],[],[],[],[],[]]
 
         for i in range(0, len(dataset), 2):
@@ -222,13 +180,3 @@ class FewShotDataset(Dataset):
         # Print New Line on Complete
         if iteration == total: 
             print()
-
-    def save_to_dir(self, path, ECGs):
-        for i, ECG in enumerate(ECGs):
-            scipy.io.savemat(f'{path}\{i}.mat', {'ECG': ECG})
-
-    def read_from_dir(self, path):
-        ECGs = []
-        for file in os.listdir(path):
-            ECGs.append(scipy.io.loadmat(f'{path}\{file}')['ECG'])
-        return ECGs

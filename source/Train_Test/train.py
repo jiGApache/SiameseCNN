@@ -33,17 +33,17 @@ def contrastive_loss(emb_1, emb_2, y):
 #########################################################
 SEED = 42
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 20
+EPOCHS = 10
 LR = 0.001
 LOSS_FUNCTION = nn.BCELoss().cuda()
 LOSS_FUNCTION = contrastive_loss
 BATCH_SIZE = 64
 WEIGHT_DECAY = 0.001
 model = Siamese().to(DEVICE)
-# model.load_state_dict(torch.load('nets\EPOCH=100_BATCH=64_SCNN.pth'))
+# model.load_state_dict(torch.load('nets\SCNN.pth'))
 optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
 THRESHHOLD = 0.5
-LOSS_MARGIN = 1.
+LOSS_MARGIN = 0.5
 #########################################################
 
 torch.manual_seed(SEED)
