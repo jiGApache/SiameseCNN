@@ -13,32 +13,11 @@ import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
 from Models.SiameseModel import Siamese
-from Datasets.Physionet.NoisyDataset import PairsDataset
+# from Datasets.Physionet.NoisyDataset import PairsDataset
+from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 
-# ecg1 = np.transpose(scipy.io.loadmat('Data\PTB-XL\Train\Clean\\00010.mat')['ECG'])
-# ecg2 = np.transpose(scipy.io.loadmat('Data\PTB-XL\Train\Clean\\00020.mat')['ECG'])
-# ecg3 = np.transpose(scipy.io.loadmat('Data\PTB-XL\Train\Clean\\00030.mat')['ECG'])
-# ecg4 = np.transpose(scipy.io.loadmat('Data\PTB-XL\Train\Clean\\00050.mat')['ECG'])
-ecg5 = np.transpose(scipy.io.loadmat('Data\ChineseDataset\TrainingSet1\A0149.mat')['ECG'])[0][0][2]
-# ecg1 = scipy.io.loadmat('Data\PTB-XL\Train\Filtered\\00010.mat')['ECG']
-# ecg2 = scipy.io.loadmat('Data\PTB-XL\Train\Filtered\\00020.mat')['ECG']
-# ecg3 = scipy.io.loadmat('Data\PTB-XL\Train\Filtered\\00030.mat')['ECG']
-# ecg4 = scipy.io.loadmat('Data\PTB-XL\Train\Filtered\\00050.mat')['ECG']
-# ecg5 = scipy.io.loadmat('Data\PTB-XL\Train\Filtered\\00060.mat')['ECG']
-# ecg1 = scipy.io.loadmat('Data\PTB-XL\Train\Prepared_Noisy\\20_clean.mat')['ECG']
-# ecg2 = scipy.io.loadmat('Data\PTB-XL\Train\Prepared_Noisy\\40_clean.mat')['ECG']
-# ecg3 = scipy.io.loadmat('Data\PTB-XL\Train\Prepared_Noisy\\60_clean.mat')['ECG']
-# ecg4 = scipy.io.loadmat('Data\PTB-XL\Train\Prepared_Noisy\\100_clean.mat')['ECG']
-# ecg5 = scipy.io.loadmat('Data\PTB-XL\Train\Prepared_Noisy\\120_clean.mat')['ECG']
-# ecg = np.concatenate((ecg1[0], ecg2[0]))
-# ecg = np.concatenate((ecg, ecg3[0]))
-# ecg = np.concatenate((ecg, ecg4[0]))
-# ecg = np.concatenate((ecg, ecg5[0]))
-plt.plot(ecg5[0])
-plt.show()
-
-# ds_noisy = PairsDataset(WITH_ROLL=True)
-# pair, label = ds_noisy.__getitem__(12) # Different but looks same: 8, 10
+ds_noisy = NoisyPairsDataset()
+pair, label = ds_noisy.__getitem__(13) # Different but looks same: 8, 10
 
 # model = Siamese()
 # model.load_state_dict(torch.load('nets\SCNN.pth'))
@@ -50,10 +29,10 @@ plt.show()
 # print('predicted: ', model(in1, in2).item())
 # print('true: ', label.item())
 
-# fig, axs = plt.subplots(2)
-# axs[0].plot(pair[0][0])
-# axs[1].plot(pair[1][0])
-# plt.show()
+fig, axs = plt.subplots(2)
+axs[0].plot(pair[0][0])
+axs[1].plot(pair[1][0])
+plt.show()
 
 
 # chinese_dtst_reference = pd.read_csv('ChineseDataset\REFERENCE.csv', delimiter=',')
