@@ -50,9 +50,6 @@ class NoisyPairsDataset(Dataset):
             
             f_index = index
             s_index = (index + 1) % self.norm_pairs_count
-            
-            print(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][f_index]}.mat')
-            print(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][s_index]}.mat')
 
             ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][f_index]}.mat')['ECG']
             ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][s_index]}.mat')['ECG']

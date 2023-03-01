@@ -23,6 +23,7 @@ def contrastive_loss(emb_1, emb_2, y):
             distances.append(torch.square(torch.cdist(emb_1[None, i], emb_2[None, i], p=2)))    
         else:
             distances.append(torch.maximum(torch.tensor(0.), LOSS_MARGIN**2 - torch.square(torch.cdist(emb_1[None, i], emb_2[None, i], p=2))))
+            # distances.append((LOSS_MARGIN**2) / torch.square(torch.cdist(emb_1[None, i], emb_2[None, i], p=2)))
 
     distances = torch.cat(distances).to(DEVICE)
     loss = torch.mean(distances)
@@ -33,7 +34,7 @@ def contrastive_loss(emb_1, emb_2, y):
 #########################################################
 SEED = 42
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 10
+EPOCHS = 100
 LR = 0.001
 LOSS_FUNCTION = nn.BCELoss().cuda()
 LOSS_FUNCTION = contrastive_loss
@@ -43,7 +44,7 @@ model = Siamese().to(DEVICE)
 # model.load_state_dict(torch.load('nets\SCNN.pth'))
 optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
 THRESHHOLD = 0.5
-LOSS_MARGIN = 0.5
+LOSS_MARGIN = 1.
 #########################################################
 
 torch.manual_seed(SEED)
@@ -99,7 +100,7 @@ def print_progressBar (iteration, total, prefix = '', suffix = '', decimals = 1,
 
 # full_ds = DS_Chinese(device=DEVICE, fill_with_type='mean')
 # full_ds = DS_5000()
-full_ds = DS_Noisy(WITH_ROLL=True)
+full_ds = DS_Noisy()
 train_size = int(0.8 * full_ds.__len__())
 test_size = full_ds.__len__() - train_size
 train_ds, test_ds = random_split(full_ds, [train_size, test_size], generator=torch.Generator().manual_seed(SEED))

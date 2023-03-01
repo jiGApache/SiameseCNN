@@ -5,7 +5,6 @@ sys.path.append(dir_path)
 
 import random
 import scipy.io
-import codecs
 import pandas as pd
 import numpy as np
 import math
@@ -13,11 +12,12 @@ import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
 from Models.SiameseModel import Siamese
+from Models.EmbeddingModel import EmbeddingModule
 # from Datasets.Physionet.NoisyDataset import PairsDataset
 from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 
-ds_noisy = NoisyPairsDataset()
-pair, label = ds_noisy.__getitem__(13) # Different but looks same: 8, 10
+# ds_noisy = NoisyPairsDataset()
+# pair, label = ds_noisy.__getitem__(700) # Different but looks same: 8, 10
 
 # model = Siamese()
 # model.load_state_dict(torch.load('nets\SCNN.pth'))
@@ -29,128 +29,87 @@ pair, label = ds_noisy.__getitem__(13) # Different but looks same: 8, 10
 # print('predicted: ', model(in1, in2).item())
 # print('true: ', label.item())
 
-fig, axs = plt.subplots(2)
-axs[0].plot(pair[0][0])
-axs[1].plot(pair[1][0])
+# fig, axs = plt.subplots(2)
+# axs[0].plot(pair[0][0])
+# axs[1].plot(pair[1][0])
+# plt.ylim(-2, 2)
+# plt.show()
+
+################################################################################
+
+# # ecg = scipy.io.loadmat('Data\ChineseDataset\TrainingSet1\A0101.mat')['ECG'][0][0][2]
+# ecg = scipy.io.loadmat('Data\ChineseDataset\FilteredECG\A0101.mat')['ECG']
+# # ecg = scipy.io.loadmat('Data\ChineseDataset\PreparedDataset_Noisy\A0101.mat')['ECG']
+# plt.plot(ecg[2])
+# plt.ylim(-2, 2)
+# # plt.ylim(-8, 8)
+# plt.show()
+
+################################################################################
+
+model = Siamese()
+model.load_state_dict(torch.load('nets\SCNN.pth'))
+model.train(False)
+
+embedding_model = EmbeddingModule()
+embedding_model.load_state_dict(model.state_dict())
+embedding_model.train(False)
+
+
+ecgs_1_files = ['A0149', 'A0157', 'A0164', 'A0166', 'A0170', 'A0173', 'A0175', 'A0176', 'A0177', 'A0179']
+ecgs1 = []
+for name in ecgs_1_files:
+    ecgs1.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{name}.mat')['ECG'], dtype=torch.float32)[None, :, 100:3100])
+
+ecgs_2_files = ['A0184', 'A0186', 'A0198', 'A0203', 'A0205', 'A0214', 'A0217', 'A0220', 'A0222', 'A0231']
+ecgs2 = []
+for name in ecgs_2_files:
+    ecgs2.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{name}.mat')['ECG'], dtype=torch.float32)[None, :, 100:3100])
+
+ecgs_3_files = ['A0188', 'A0212', 'A0223', 'A0236', 'A0238', 'A0239', 'A0240', 'A0243', 'A0246', 'A0248']
+ecgs3 = []
+for name in ecgs_3_files:
+    ecgs3.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{name}.mat')['ECG'], dtype=torch.float32)[None, :, 100:3100])
+
+ecgs_8_files =['A0154', 'A0165', 'A0185', 'A0187', 'A0194', 'A0195', 'A0196', 'A0201', 'A0232', 'A0234']
+ecgs8 = []
+for name in ecgs_8_files:
+    ecgs8.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{name}.mat')['ECG'], dtype=torch.float32)[None, :, 100:3100])
+
+embeddings1 = []
+embeddings2 = []
+embeddings3 = []
+embeddings8 = []
+
+for ecg in ecgs1:    embeddings1.append(torch.squeeze(embedding_model(ecg)).detach().numpy())
+for ecg in ecgs2:    embeddings2.append(torch.squeeze(embedding_model(ecg)).detach().numpy())
+for ecg in ecgs3:    embeddings3.append(torch.squeeze(embedding_model(ecg)).detach().numpy())
+for ecg in ecgs8:    embeddings8.append(torch.squeeze(embedding_model(ecg)).detach().numpy())
+
+# from sklearn.decomposition import PCA
+# pca = PCA(n_components=2, svd_solver='full')
+# pca.fit(embeddings1+embeddings2+embeddings3+embeddings8)
+# embeddings1 = pca.transform(embeddings1)
+# embeddings2 = pca.transform(embeddings2)
+# embeddings3 = pca.transform(embeddings3)
+# embeddings8 = pca.transform(embeddings8)
+
+# plt.scatter(x=embeddings1[:, 0], y=embeddings1[:, 1], c='green')
+# plt.scatter(x=embeddings2[:, 0], y=embeddings2[:, 1], c='red')
+# plt.scatter(x=embeddings3[:, 0], y=embeddings3[:, 1], c='purple')
+# plt.scatter(x=embeddings8[:, 0], y=embeddings8[:, 1], c='blue')
+# plt.show()
+
+import umap
+fit = umap.UMAP()
+fit.fit(embeddings1+embeddings2+embeddings3+embeddings8)
+embeddings1 = fit.transform(embeddings1)
+embeddings2 = fit.transform(embeddings2)
+embeddings3 = fit.transform(embeddings3)
+embeddings8 = fit.transform(embeddings8)
+
+plt.scatter(x=embeddings1[:, 0], y=embeddings1[:, 1], c='green')
+plt.scatter(x=embeddings2[:, 0], y=embeddings2[:, 1], c='red')
+# plt.scatter(x=embeddings3[:, 0], y=embeddings3[:, 1], c='purple')
+# plt.scatter(x=embeddings8[:, 0], y=embeddings8[:, 1], c='blue')
 plt.show()
-
-
-# chinese_dtst_reference = pd.read_csv('ChineseDataset\REFERENCE.csv', delimiter=',')
-# ecg = scipy.io.loadmat('ChineseDataset\TrainingSet1\A1445.mat')['ECG'][0][0][2]
-# L = len(ecg[0])
-# x = np.linspace(0, L, L)
-# A = np.random.uniform(0.05, 0.4)
-# T = 2 * L
-# noise = np.concatenate((np.zeros((1, L)), np.zeros((1, L))), axis=0)
-# wander = []
-# PHI = np.random.uniform(0, 2 * math.pi)
-# for i in x:
-#     wander.append(A * np.cos(2 * math.pi * (i/T) + PHI))
-# noise = np.sum([noise, wander], axis=0)
-# print(noise)
-# plt.plot(ecg[0] + noise[0])
-# plt.show()
-
-# DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-# ds = PairsDataset(DEVICE, fill_with_type='mean')
-
-# for i in range(ds.__len__()):
-#     ecg = ds.__getitem__(1)
-#     plt.plot(ecg[6][0][0])
-#     plt.show()
-#     break
-
-# print(mat)
-
-# import matplotlib.pyplot as plt
-# from PreprocessingFilters import filter1
-# import math
-
-# struct1 = np.ones((mat['ECG'][0][0][2].shape[0], 6)) / 5
-# struct2 = np.ones((mat['ECG'][0][0][2].shape[0], 45)) / 5
-# data1 = filter1(mat['ECG'][0][0][2], struct1, struct2)[:, 100:-100]
-
-# mean = []
-# if (15000 - data1.shape[1]) > 0:
-#     for i in range(12):
-#         mean.append(np.full(15000 - data1.shape[1], np.mean(data1[i])))
-#     print(data1.shape)
-#     ekg = np.column_stack([data1, mean])
-# else:
-#     ekg = data1[:, :15000]
-# print(ekg.shape)
-
-# _, axs = plt.subplots(2)
-# axs[0].plot(ekg[1, :])
-
-# means = [5.6671288368373204e-08, -5.672094472486019e-08, -1.1381123812568519e-07,
-#                  -7.73628575187182e-10, 8.544064961353723e-08, -8.466800578420468e-08,
-#                  -5.644898281745803e-08, -3.3201897366838757e-07, -6.639807663731727e-08,
-#                  -1.9771499946997733e-08, -3.3253429074075554e-08, 1.487236435452322e-07]
-# stds = [0.2305271687030844, 0.24780370485706876, 0.23155043161905942,
-#         0.22074153961314927, 0.20708526280758174, 0.22153766144293813,
-#         0.353942949952694, 0.3942397032518631, 0.4228515959530688,
-#         0.436324876078121, 0.47316252072611537, 0.5328047065188085]
-
-# for i in range(12):
-#     ekg[i, :] = (ekg[i, :] - means[i]) / stds[i]
-# axs[1].plot(ekg[1, :])
-
-# plt.show()
-
-
-
-# import math
-# stats = {}
-# dataframe = chinese_dtst_reference.loc[chinese_dtst_reference['Recording'] <= 'A2000'].reset_index(drop=True)
-# max_shape = 0
-# min_shape = math.inf
-# for i in range(len(dataframe.index)):
-#     current_mat = scipy.io.loadmat('ChineseDataset\TrainingSet1\\' + dataframe['Recording'][i] + '.mat')['ECG'][0][0][2]
-#     current_shape = current_mat.shape[1]
-
-#     if current_shape not in stats.keys(): stats[current_shape] = 1
-#     else: stats[current_shape] += 1
-
-#     if max_shape < current_shape: max_shape = current_shape
-#     if min_shape > current_shape: min_shape = current_shape
-# print(min_shape, max_shape)
-
-# import matplotlib.pyplot as plt
-# plt.pie(stats.values(), labels=stats.keys())
-# plt.show()
-
-
-
-# import math
-
-# df = pd.read_csv('ChineseDataset\REFERENCE.csv', delimiter=',')
-# df = df.loc[df['Recording'] <= 'A2000'].reset_index(drop=True)
-
-# channels_of_12 = [[],[],[],[],[],[],[],[],[],[],[],[]]
-
-# for i in range(2000):
-#     mat = scipy.io.loadmat('ChineseDataset\TrainingSet1\\' + df['Recording'][i] + '.mat')['ECG'][0][0][2]
-#     for j in range(12):
-#         channels_of_12[j].append(mat[j])
-
-# means = []
-# stds = []
-# for channel in channels_of_12:
-#     counter = 0
-
-#     regular_sum = 0
-#     squared_sum = 0
-
-#     for element in channel:
-#         counter += len(element)
-#         regular_sum += sum(element)
-
-#     for element in channel:
-#         squared_sum += sum(pow(element - regular_sum / counter, 2))
-
-#     means.append(regular_sum / counter)
-#     stds.append(math.sqrt(squared_sum / counter))
-
-# print('means: ', means)
-# print('stds: ', stds)

@@ -36,7 +36,7 @@ def prepare_dataset(path='Data\ChineseDataset\PreparedDataset_Noisy\\'):
 
     else:
         for i in range(dataset_size):
-            ecg = scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{df["Recording"][i]}.mat')['ECG']
+            ecg = scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{df["Recording"][i]}.mat')['ECG'][:, 100:100+FRAGMENT_SIZE]
 
             recording = [ecg, df['Recording'][i]]
             total_data.append(recording)

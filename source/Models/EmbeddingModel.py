@@ -5,8 +5,4 @@ class EmbeddingModule(Siamese):
         super().__init__()
 
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = self.embedding(x)
-        return x
+        return self.forward_once(x)
