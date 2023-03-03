@@ -16,7 +16,7 @@ from Models.EmbeddingModel import EmbeddingModule
 # from Datasets.Physionet.NoisyDataset import PairsDataset
 from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 
-# ds_noisy = NoisyPairsDataset()
+ds_noisy = NoisyPairsDataset([1, 2, 5])
 # pair, label = ds_noisy.__getitem__(700) # Different but looks same: 8, 10
 
 # model = Siamese()
@@ -96,8 +96,8 @@ for ecg in ecgs8:    embeddings8.append(torch.squeeze(embedding_model(ecg)).deta
 
 # plt.scatter(x=embeddings1[:, 0], y=embeddings1[:, 1], c='green')
 # plt.scatter(x=embeddings2[:, 0], y=embeddings2[:, 1], c='red')
-# plt.scatter(x=embeddings3[:, 0], y=embeddings3[:, 1], c='purple')
-# plt.scatter(x=embeddings8[:, 0], y=embeddings8[:, 1], c='blue')
+# # plt.scatter(x=embeddings3[:, 0], y=embeddings3[:, 1], c='purple')
+# # plt.scatter(x=embeddings8[:, 0], y=embeddings8[:, 1], c='blue')
 # plt.show()
 
 import umap

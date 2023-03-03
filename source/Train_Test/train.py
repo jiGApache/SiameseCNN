@@ -34,7 +34,7 @@ def contrastive_loss(emb_1, emb_2, y):
 #########################################################
 SEED = 42
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 100
+EPOCHS = 200
 LR = 0.001
 LOSS_FUNCTION = nn.BCELoss().cuda()
 LOSS_FUNCTION = contrastive_loss
@@ -104,8 +104,8 @@ full_ds = DS_Noisy()
 train_size = int(0.8 * full_ds.__len__())
 test_size = full_ds.__len__() - train_size
 train_ds, test_ds = random_split(full_ds, [train_size, test_size], generator=torch.Generator().manual_seed(SEED))
-train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True, generator=torch.Generator().manual_seed(SEED))
-test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True, generator=torch.Generator().manual_seed(SEED))
+train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, persistent_workers=True, pin_memory=True, generator=torch.Generator().manual_seed(SEED))
+test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, persistent_workers=True, pin_memory=True, generator=torch.Generator().manual_seed(SEED))
 
 
 history = {
@@ -121,7 +121,7 @@ correct_preds = []
 def train_epoch(epoch_counter):
 
     steps_in_epoch = 0
-    correct_predictions_in_epoch = 0
+    # correct_predictions_in_epoch = 0
     epoch_loss = 0.0
 
     for TS_T, label in train_dl:
@@ -148,7 +148,7 @@ def train_epoch(epoch_counter):
 def test_epoch(epoch_counter):
     
     steps_in_epoch = 0
-    correct_predictions_in_epoch = 0
+    # correct_predictions_in_epoch = 0
     epoch_loss = 0.0
 
     for TS_T, label in test_dl:

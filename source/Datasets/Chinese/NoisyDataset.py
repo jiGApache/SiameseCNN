@@ -10,7 +10,7 @@ import pandas as pd
 
 class NoisyPairsDataset(Dataset):
     
-    def __init__(self, WITH_ROLL=False):
+    def __init__(self, labels = [1, 2], WITH_ROLL=False):
 
         random.seed(42)
         np.random.seed(42)
@@ -25,93 +25,70 @@ class NoisyPairsDataset(Dataset):
         if (len(os.listdir(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}')) == 0):
             prepare_dataset(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\\')
 
-        self.normal_diagnose = 1
-        self.abnormal_diagnose = 2
+        self.labels = labels
 
         df = pd.read_csv('Data\ChineseDataset\REFERENCE.csv', delimiter=',')
         df = df.loc[df['Recording'] <= 'A2000']
 
-        self.normal_df = df.loc[(df['First_label'] == self.normal_diagnose) | \
-                                (df['Second_label'] == self.normal_diagnose) | \
-                                (df['Third_label'] == self.normal_diagnose)].reset_index(drop=True)
-        
-        self.abnormal_df = df.loc[(df['First_label'] == self.abnormal_diagnose) | \
-                                  (df['Second_label'] == self.abnormal_diagnose) | \
-                                  (df['Third_label'] == self.abnormal_diagnose)].reset_index(drop=True)
-        
-        self.norm_pairs_count = len(self.normal_df) # Amount of pairs where each ECG with normal label is used once
-        self.abnorm_pairs_count = len(self.abnormal_df) # Amount of pairs where each ECG with abnormal label is used once
+        self.dfs = []
+        for label in self.labels:
+            self.dfs.append(df.loc[
+                (df['First_label'] == label) | \
+                (df['Second_label'] == label) | \
+                (df['Third_label'] == label)
+            ].reset_index(drop=True))
 
+        self.ds_len = 0
+        for df in self.dfs:
+            self.ds_len += len(df) * 2
         
     def __getitem__(self, index):
 
-        # Getting pairs with normal label (labels are same)
-        if index < self.norm_pairs_count:
+        # Getting pairs for each label - same labels in pair
+        for df in self.dfs:
+
+            if index < len(df):
+                
+                f_index = index
+                s_index = (index + 1) % len(df)
+
+                ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{df["Recording"][f_index]}.mat')['ECG']
+                ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{df["Recording"][s_index]}.mat')['ECG']
+                label = 1.
+
+                return (
+                        torch.as_tensor(ecg1, dtype=torch.float32),
+                        torch.as_tensor(ecg2, dtype=torch.float32),
+                    ), torch.as_tensor((label), dtype=torch.float32)
             
-            f_index = index
-            s_index = (index + 1) % self.norm_pairs_count
-
-            ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][f_index]}.mat')['ECG']
-            ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][s_index]}.mat')['ECG']
-            label = 1.
-
-            return (
-                    torch.as_tensor(ecg1, dtype=torch.float32),
-                    torch.as_tensor(ecg2, dtype=torch.float32),
-                ), torch.as_tensor((label), dtype=torch.float32)
-        
-        else: index -= self.norm_pairs_count
+            else: 
+                index -= len(df)
+                continue
 
         
-        # Getting pairs with abnormal label (labels are same)
-        if index < self.abnorm_pairs_count:
+        # Getting pairs for each label - different labels in pair
+        for df in self.dfs:
 
-            f_index = index
-            s_index = (index + 1) % self.abnorm_pairs_count
+            if index < len(df):
             
-            ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{self.abnormal_df["Recording"][f_index]}.mat')['ECG']
-            ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{self.abnormal_df["Recording"][s_index]}.mat')['ECG']
-            label = 1.
+                f_index = index
+                df_index = np.random.randint(0, len(self.labels))
+                while df.equals(self.dfs[df_index]):
+                    df_index = np.random.randint(0, len(self.labels))
+                s_index = np.random.randint(0, len(self.dfs[df_index]))
+                
+                ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{df["Recording"][f_index]}.mat')['ECG']
+                ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{self.dfs[df_index]["Recording"][s_index]}.mat')['ECG']
+                label = 0.
 
-            return (
-                    torch.as_tensor(ecg1, dtype=torch.float32),
-                    torch.as_tensor(ecg2, dtype=torch.float32),
-                ), torch.as_tensor((label), dtype=torch.float32)
+                return (
+                        torch.as_tensor(ecg1, dtype=torch.float32),
+                        torch.as_tensor(ecg2, dtype=torch.float32),
+                    ), torch.as_tensor((label), dtype=torch.float32)
         
-        else: index -= self.abnorm_pairs_count
-        
-
-        # Getting pairs with normal and abnormal labels (labels are different)
-        if index < self.norm_pairs_count:
-            
-            f_index = index
-            s_index = np.random.randint(0, self.abnorm_pairs_count)
-            
-            ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][f_index]}.mat')['ECG']
-            ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{self.abnormal_df["Recording"][s_index]}.mat')['ECG']
-            label = 0.
-
-            return (
-                    torch.as_tensor(ecg1, dtype=torch.float32),
-                    torch.as_tensor(ecg2, dtype=torch.float32),
-                ), torch.as_tensor((label), dtype=torch.float32)
-        
-        else: index -= self.norm_pairs_count
-        
-
-        # Getting pairs with normal and abnormal labels (labels are different)
-        f_index = index
-        s_index = random.randint(0, self.norm_pairs_count - 1)
-        
-        ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{self.abnormal_df["Recording"][f_index]}.mat')['ECG']
-        ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][s_index]}.mat')['ECG']
-        label = 0.
-
-        return (
-                torch.as_tensor(ecg1, dtype=torch.float32),
-                torch.as_tensor(ecg2, dtype=torch.float32),
-            ), torch.as_tensor((label), dtype=torch.float32)
-    
+            else: 
+                index -= len(df)
+                continue
 
     def __len__(self):
-        return  self.norm_pairs_count * 2 + self.abnorm_pairs_count * 2
+        return  self.ds_len
