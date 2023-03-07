@@ -15,14 +15,16 @@ import matplotlib.pyplot as plt
 import os
 import random
 import math
+import json
 
 def contrastive_loss(emb_1, emb_2, y):
+
     distances = []
     for i in range(len(y)):
         if y[i] == 1:
             distances.append(torch.square(torch.cdist(emb_1[None, i], emb_2[None, i], p=2)))    
         else:
-            distances.append(torch.maximum(torch.tensor(0.), LOSS_MARGIN**2 - torch.square(torch.cdist(emb_1[None, i], emb_2[None, i], p=2))))
+            distances.append(torch.maximum(torch.tensor(0.), LOSS_MARGIN - torch.square(torch.cdist(emb_1[None, i], emb_2[None, i], p=2))))
             # distances.append((LOSS_MARGIN**2) / torch.square(torch.cdist(emb_1[None, i], emb_2[None, i], p=2)))
 
     distances = torch.cat(distances).to(DEVICE)
@@ -34,17 +36,14 @@ def contrastive_loss(emb_1, emb_2, y):
 #########################################################
 SEED = 42
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 200
+EPOCHS = 100
 LR = 0.001
 LOSS_FUNCTION = nn.BCELoss().cuda()
 LOSS_FUNCTION = contrastive_loss
 BATCH_SIZE = 64
 WEIGHT_DECAY = 0.001
-model = Siamese().to(DEVICE)
-# model.load_state_dict(torch.load('nets\SCNN.pth'))
-optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
 THRESHHOLD = 0.5
-LOSS_MARGIN = 1.
+LOSS_MARGIN = 0. # Initializes in train\test loop
 #########################################################
 
 torch.manual_seed(SEED)
@@ -56,19 +55,9 @@ torch.backends.cudnn.benchmark = True
 
 def show_history(history):
 
-    # plt.subplot(2,1,1)
-    # plt.plot(history['epochs'], history['train_accuracies'], label='Train accuracy')
-    # plt.plot(history['epochs'], history['test_accuracies'], label='Test accuracy')
-    # plt.ylim([0, 1.0])
-    # plt.xlabel('Epoch')
-    # plt.ylabel('Accuracy')
-    # plt.legend()
-    # plt.grid(True)
-
-    plt.subplot(2,1,2)
     plt.plot(history['epochs'], history['train_losses'], label='Train loss')
     plt.plot(history['epochs'], history['test_losses'], label='Test loss')
-    plt.ylim([0, 1.0])
+    # plt.ylim([0, 1.0])
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.legend()
@@ -100,20 +89,20 @@ def print_progressBar (iteration, total, prefix = '', suffix = '', decimals = 1,
 
 # full_ds = DS_Chinese(device=DEVICE, fill_with_type='mean')
 # full_ds = DS_5000()
-full_ds = DS_Noisy()
+full_ds = DS_Noisy([1, 3, 5, 7, 9])
 train_size = int(0.8 * full_ds.__len__())
 test_size = full_ds.__len__() - train_size
 train_ds, test_ds = random_split(full_ds, [train_size, test_size], generator=torch.Generator().manual_seed(SEED))
-train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, persistent_workers=True, pin_memory=True, generator=torch.Generator().manual_seed(SEED))
-test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, persistent_workers=True, pin_memory=True, generator=torch.Generator().manual_seed(SEED))
+train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, generator=torch.Generator().manual_seed(SEED))
+test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, generator=torch.Generator().manual_seed(SEED))
 
 
 history = {
-    'epochs' : [0],
-    'train_losses' : [1.],
-    'test_losses' : [1.],
-    'train_accuracies' : [0],
-    'test_accuracies' : [0]
+    'epochs' : [],
+    'train_losses' : [],
+    'test_losses' : []#,
+    # 'train_accuracies' : [],
+    # 'test_accuracies' : []
 }
 correct_preds = []
 
@@ -168,29 +157,42 @@ def test_epoch(epoch_counter):
 
 if __name__ == '__main__':
 
-    for epoch in range(EPOCHS):
+    distances = [0.2, 0.5, 0.7, 1., 1.5, 2., 3., 4.]
 
-        model.train(True)
-        # train_acc, train_loss = train_epoch(epoch_counter)
-        train_loss = train_epoch(epoch + 1)
-        torch.cuda.empty_cache()
+    for distance in distances:
 
-        model.train(False)
-        # test_acc, test_loss = test_epoch(epoch_counter)
-        test_loss = test_epoch(epoch + 1)
-        torch.cuda.empty_cache()
+        LOSS_MARGIN = distance
+        model = Siamese().to(DEVICE)
+        optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
 
-        history['epochs'].append(epoch + 1)
-        history['train_losses'].append(train_loss)
-        history['test_losses'].append(test_loss)
-        # history['train_accuracies'].append(train_acc)
-        # history['test_accuracies'].append(test_acc)
+        for epoch in range(EPOCHS):
 
-        # print(f'Epoch: {epoch+1}\n\tTrain accuracy: {train_acc:.5f} -- Train loss: {train_loss:.5f}\n\tTest accuracy:  {test_acc:.5f} -- Test loss:  {test_loss:.5f}\n\n')
-        print(f'Epoch: {epoch+1}\n\tTrain loss: {train_loss:.5f}\n\tTest loss:  {test_loss:.5f}\n\n')
+            model.train(True)
+            # train_acc, train_loss = train_epoch(epoch_counter)
+            train_loss = train_epoch(epoch + 1)
+            torch.cuda.empty_cache()
 
-    if not os.path.exists('nets'):
-        os.mkdir('nets')
-    torch.save(model.state_dict(), 'nets\\SCNN.pth')
+            model.train(False)
+            # test_acc, test_loss = test_epoch(epoch_counter)
+            test_loss = test_epoch(epoch + 1)
+            torch.cuda.empty_cache()
 
-    show_history(history)
+            history['epochs'].append(epoch + 1)
+            history['train_losses'].append(train_loss)
+            history['test_losses'].append(test_loss)
+            # history['train_accuracies'].append(train_acc)
+            # history['test_accuracies'].append(test_acc)
+
+            # print(f'Epoch: {epoch+1}\n\tTrain accuracy: {train_acc:.5f} -- Train loss: {train_loss:.5f}\n\tTest accuracy:  {test_acc:.5f} -- Test loss:  {test_loss:.5f}\n\n')
+            print(f'Epoch: {epoch+1}\n\tTrain loss: {train_loss:.5f}\n\tTest loss:  {test_loss:.5f}\n\n')
+
+        if not os.path.exists('nets'):
+            os.mkdir('nets')
+        torch.save(model.state_dict(), f'nets\SCNN_d={distance}_notan.pth')
+
+        if not os.path.exists('history'):
+            os.mkdir('history')
+        with open(f'history\history_d={distance}.txt', 'w') as history_file:
+            history_file.write(json.dumps(history))
+
+        # show_history(history)

@@ -90,7 +90,7 @@ def get_baseline_noise():
     #Baseline wander
     L = FRAGMENT_SIZE
     x = np.linspace(0, L, L)
-    A = np.random.uniform(0.1, 1.)
+    A = np.random.uniform(0.2, 0.4)
     T = 2 * L
     PHI = np.random.uniform(0, 2 * math.pi)
     wander = []

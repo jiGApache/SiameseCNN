@@ -16,7 +16,7 @@ from Models.EmbeddingModel import EmbeddingModule
 # from Datasets.Physionet.NoisyDataset import PairsDataset
 from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 
-ds_noisy = NoisyPairsDataset([1, 2, 5])
+# ds_noisy = NoisyPairsDataset()
 # pair, label = ds_noisy.__getitem__(700) # Different but looks same: 8, 10
 
 # model = Siamese()
@@ -37,79 +37,98 @@ ds_noisy = NoisyPairsDataset([1, 2, 5])
 
 ################################################################################
 
-# # ecg = scipy.io.loadmat('Data\ChineseDataset\TrainingSet1\A0101.mat')['ECG'][0][0][2]
-# ecg = scipy.io.loadmat('Data\ChineseDataset\FilteredECG\A0101.mat')['ECG']
-# # ecg = scipy.io.loadmat('Data\ChineseDataset\PreparedDataset_Noisy\A0101.mat')['ECG']
-# plt.plot(ecg[2])
-# plt.ylim(-2, 2)
-# # plt.ylim(-8, 8)
-# plt.show()
+# ecg = scipy.io.loadmat('Data\ChineseDataset\TrainingSet1\A0101.mat')['ECG'][0][0][2]
+ecg = scipy.io.loadmat('Data\ChineseDataset\FilteredECG\A0101.mat')['ECG']
+# ecg = scipy.io.loadmat('Data\ChineseDataset\PreparedDataset_Noisy\A0101.mat')['ECG']
+plt.plot(ecg[2])
+# plt.ylim(-1, 1)
+# plt.ylim(-8, 8)
+plt.show()
 
 ################################################################################
 
-model = Siamese()
-model.load_state_dict(torch.load('nets\SCNN.pth'))
-model.train(False)
 
-embedding_model = EmbeddingModule()
-embedding_model.load_state_dict(model.state_dict())
-embedding_model.train(False)
+# train_labels = [1, 3, 5, 7, 9]
+# # train_labels = []
+# # test_labels = [2, 4, 6, 8]
+# test_labels = []
+
+# # PCA = 1
+# # UMAP = 2
+# METHOD = 2
 
 
-ecgs_1_files = ['A0149', 'A0157', 'A0164', 'A0166', 'A0170', 'A0173', 'A0175', 'A0176', 'A0177', 'A0179']
-ecgs1 = []
-for name in ecgs_1_files:
-    ecgs1.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{name}.mat')['ECG'], dtype=torch.float32)[None, :, 100:3100])
+# distances = [0.2, 0.5, 0.7, 1., 1.5, 2., 3., 4.]
+# for plot_index, distance in enumerate(distances):
 
-ecgs_2_files = ['A0184', 'A0186', 'A0198', 'A0203', 'A0205', 'A0214', 'A0217', 'A0220', 'A0222', 'A0231']
-ecgs2 = []
-for name in ecgs_2_files:
-    ecgs2.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{name}.mat')['ECG'], dtype=torch.float32)[None, :, 100:3100])
+#     embedding_model = EmbeddingModule()
+#     embedding_model.load_state_dict(torch.load(f'nets\SCNN_d={distance}_notan.pth'))
+#     embedding_model.train(False)
 
-ecgs_3_files = ['A0188', 'A0212', 'A0223', 'A0236', 'A0238', 'A0239', 'A0240', 'A0243', 'A0246', 'A0248']
-ecgs3 = []
-for name in ecgs_3_files:
-    ecgs3.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{name}.mat')['ECG'], dtype=torch.float32)[None, :, 100:3100])
 
-ecgs_8_files =['A0154', 'A0165', 'A0185', 'A0187', 'A0194', 'A0195', 'A0196', 'A0201', 'A0232', 'A0234']
-ecgs8 = []
-for name in ecgs_8_files:
-    ecgs8.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{name}.mat')['ECG'], dtype=torch.float32)[None, :, 100:3100])
+#     train_ECGs = []
+#     test_ECGs = []
+#     df = pd.read_csv('Data\ChineseDataset\REFERENCE.csv', delimiter=',')
+#     ELEMENTS_PER_CLASS = 20
 
-embeddings1 = []
-embeddings2 = []
-embeddings3 = []
-embeddings8 = []
 
-for ecg in ecgs1:    embeddings1.append(torch.squeeze(embedding_model(ecg)).detach().numpy())
-for ecg in ecgs2:    embeddings2.append(torch.squeeze(embedding_model(ecg)).detach().numpy())
-for ecg in ecgs3:    embeddings3.append(torch.squeeze(embedding_model(ecg)).detach().numpy())
-for ecg in ecgs8:    embeddings8.append(torch.squeeze(embedding_model(ecg)).detach().numpy())
+#     for label in train_labels:
+#         labeld_df = df.loc[((df['First_label'] == label) & (df['Second_label'] != label) & (df['Third_label'] != label))].reset_index(drop=True)
+#         for i in range(ELEMENTS_PER_CLASS):
+#             train_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{labeld_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, 100:3100])
 
-# from sklearn.decomposition import PCA
-# pca = PCA(n_components=2, svd_solver='full')
-# pca.fit(embeddings1+embeddings2+embeddings3+embeddings8)
-# embeddings1 = pca.transform(embeddings1)
-# embeddings2 = pca.transform(embeddings2)
-# embeddings3 = pca.transform(embeddings3)
-# embeddings8 = pca.transform(embeddings8)
+#     for label in test_labels:
+#         labeld_df = df.loc[((df['First_label'] == label) & (df['Second_label'] != label) & (df['Third_label'] != label))].reset_index(drop=True)
+#         for i in range(ELEMENTS_PER_CLASS):
+#             test_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{labeld_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, 100:3100])
 
-# plt.scatter(x=embeddings1[:, 0], y=embeddings1[:, 1], c='green')
-# plt.scatter(x=embeddings2[:, 0], y=embeddings2[:, 1], c='red')
-# # plt.scatter(x=embeddings3[:, 0], y=embeddings3[:, 1], c='purple')
-# # plt.scatter(x=embeddings8[:, 0], y=embeddings8[:, 1], c='blue')
+
+#     train_embeddings = []
+#     test_embeddings = []
+
+#     for ecg in train_ECGs:
+#         train_embeddings.append(torch.squeeze(embedding_model(ecg)).detach().numpy())
+
+#     for ecg in test_ECGs:
+#         test_embeddings.append(torch.squeeze(embedding_model(ecg)).detach().numpy())
+
+
+
+#     if METHOD == 1:
+#         from sklearn.decomposition import PCA
+#         pca = PCA(n_components=2, svd_solver='full')
+#         pca.fit(train_embeddings + test_embeddings)
+#         if len(train_labels) > 0: tf_train_embeds = pca.transform(train_embeddings)
+#         if len(test_labels) > 0: tf_test_embeds = pca.transform(test_embeddings)
+#     else:
+#         import umap
+#         fit = umap.UMAP()
+#         fit.fit(train_embeddings + test_embeddings)
+#         if len(train_labels) > 0: tf_train_embeds = fit.transform(train_embeddings)
+#         if len(test_labels) > 0: tf_test_embeds = fit.transform(test_embeddings)
+
+
+#     plt.subplot(2, 4, plot_index+1)
+#     plt.subplot(2, 4, plot_index+1).set_xlabel(f'd={distance}')
+#     for i in range(len(train_labels)):
+#         plt.scatter(x=tf_train_embeds[ELEMENTS_PER_CLASS*i:ELEMENTS_PER_CLASS*(i+1), 0], y=tf_train_embeds[ELEMENTS_PER_CLASS*i:ELEMENTS_PER_CLASS*(i+1), 1], label=train_labels[i])
+#     for i in range(len(test_labels)):
+#         plt.scatter(x=tf_test_embeds[ELEMENTS_PER_CLASS*i:ELEMENTS_PER_CLASS*(i+1), 0], y=tf_test_embeds[ELEMENTS_PER_CLASS*i:ELEMENTS_PER_CLASS*(i+1), 1], label=test_labels[i])
+
+# plt.legend()
 # plt.show()
 
-import umap
-fit = umap.UMAP()
-fit.fit(embeddings1+embeddings2+embeddings3+embeddings8)
-embeddings1 = fit.transform(embeddings1)
-embeddings2 = fit.transform(embeddings2)
-embeddings3 = fit.transform(embeddings3)
-embeddings8 = fit.transform(embeddings8)
 
-plt.scatter(x=embeddings1[:, 0], y=embeddings1[:, 1], c='green')
-plt.scatter(x=embeddings2[:, 0], y=embeddings2[:, 1], c='red')
-# plt.scatter(x=embeddings3[:, 0], y=embeddings3[:, 1], c='purple')
-# plt.scatter(x=embeddings8[:, 0], y=embeddings8[:, 1], c='blue')
-plt.show()
+################################################################################
+
+
+# import json
+# distances = [0.2, 0.5, 0.7, 1., 1.5, 2., 3., 4.]
+# step = 100
+# with open(f'history\history_d=4.0.txt') as json_file:
+#     data = json.load(json_file)
+#     for i, distance in enumerate(distances):
+#         plt.plot(data['epochs'][step*i:step*(i+1)], data['test_losses'][step*i:step*(i+1)], label=str(distance))
+#     plt.ylim([0, 2.0])
+#     plt.legend()
+#     plt.show()
