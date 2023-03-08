@@ -45,8 +45,8 @@ class Siamese(nn.Module):
             nn.BatchNorm1d(64),
             nn.LeakyReLU(negative_slope=self.slope),
             nn.MaxPool1d(kernel_size=8),
-            nn.Flatten(start_dim=1)#,
-            # nn.Tanh()
+            nn.Flatten(start_dim=1),
+            nn.Tanh()
         )
 
         self.embedding = nn.Sequential(

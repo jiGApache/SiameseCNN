@@ -184,15 +184,14 @@ if __name__ == '__main__':
             # history['test_accuracies'].append(test_acc)
 
             # print(f'Epoch: {epoch+1}\n\tTrain accuracy: {train_acc:.5f} -- Train loss: {train_loss:.5f}\n\tTest accuracy:  {test_acc:.5f} -- Test loss:  {test_loss:.5f}\n\n')
-            print(f'Epoch: {epoch+1}\n\tTrain loss: {train_loss:.5f}\n\tTest loss:  {test_loss:.5f}\n\n')
+            print(f'Epoch: {epoch+1}\tTrain loss: {train_loss:.5f}\tTest loss:  {test_loss:.5f}\n\n')
 
         if not os.path.exists('nets'):
             os.mkdir('nets')
-        torch.save(model.state_dict(), f'nets\SCNN_d={distance}_notan.pth')
+        torch.save(model.state_dict(), f'nets\SCNN_d={distance}_with_tan.pth')
 
-        if not os.path.exists('history'):
-            os.mkdir('history')
-        with open(f'history\history_d={distance}.txt', 'w') as history_file:
-            history_file.write(json.dumps(history))
-
-        # show_history(history)
+    if not os.path.exists('history'):
+        os.mkdir('history')
+    with open(f'history\history_with_tan.json', 'w') as history_file:
+    # with open(f'history\history_no_tan.json', 'w') as history_file:
+        history_file.write(json.dumps(history))
