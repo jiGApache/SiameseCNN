@@ -37,11 +37,11 @@ from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 
 ################################################################################
 
-# # ecg = scipy.io.loadmat('Data\ChineseDataset\TrainingSet1\A0101.mat')['ECG'][0][0][2]
-# ecg = scipy.io.loadmat('Data\ChineseDataset\FilteredECG\A0101.mat')['ECG']
-# # ecg = scipy.io.loadmat('Data\ChineseDataset\PreparedDataset_Noisy\A0101.mat')['ECG']
-# plt.plot(ecg[2])
-# # plt.ylim(-1, 1)
+# # ecg = scipy.io.loadmat('Data\ChineseDataset\TrainingSet1\A0011.mat')['ECG'][0][0][2][:, :5000]
+# ecg = scipy.io.loadmat('Data\ChineseDataset\FilteredECG\A0011.mat')['ECG'][:, :5000]
+# # ecg = scipy.io.loadmat('Data\ChineseDataset\PreparedDataset_Noisy\A0011.mat')['ECG']
+# plt.plot(ecg[0])
+# plt.ylim(-1, 1)
 # # plt.ylim(-8, 8)
 # plt.show()
 
@@ -49,20 +49,21 @@ from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 
 
 train_labels = [1, 3, 5, 7, 9]
-# train_labels = []
-# test_labels = [2, 4, 6, 8]
 test_labels = []
+
+# train_labels = [1, 2, 3, 4, 5, 6, 7]
+# test_labels = []
 
 # PCA = 1
 # UMAP = 2
 METHOD = 2
 
 
-distances = [0.2, 0.5, 0.7, 1., 1.5, 2., 3., 4.]
+distances = [0.5, 1., 2., 3., 4., 5.]
 for plot_index, distance in enumerate(distances):
 
     embedding_model = EmbeddingModule()
-    embedding_model.load_state_dict(torch.load(f'nets\SCNN_d={distance}_with_tan.pth'))
+    embedding_model.load_state_dict(torch.load(f'nets\SCNN_d={distance}_labels={len(train_labels)}.pth'))
     embedding_model.train(False)
 
 
@@ -108,8 +109,8 @@ for plot_index, distance in enumerate(distances):
         if len(test_labels) > 0: tf_test_embeds = fit.transform(test_embeddings)
 
 
-    plt.subplot(2, 4, plot_index+1)
-    plt.subplot(2, 4, plot_index+1).set_xlabel(f'd={distance}')
+    plt.subplot(2, 3, plot_index+1)
+    plt.subplot(2, 3, plot_index+1).set_xlabel(f'd={distance}')
     for i in range(len(train_labels)):
         plt.scatter(
             tf_train_embeds[ELEMENTS_PER_CLASS*i:ELEMENTS_PER_CLASS*(i+1), 0],
@@ -131,13 +132,11 @@ plt.show()
 
 
 # import json
-# distances = [0.2, 0.5, 0.7, 1., 1.5, 2., 3., 4.]
-# step = 100
-# with open(f'history\history_no_tan.json') as json_file:
-# with open(f'history\history_with_tan.json') as json_file:
-#     data = json.load(json_file)
-#     for i, distance in enumerate(distances):
-#         plt.plot(data['epochs'][step*i:step*(i+1)], data['test_losses'][step*i:step*(i+1)], label=str(distance))
-#     plt.ylim([0, 2.0])
-#     plt.legend()
-#     plt.show()
+# distances = [0.5, 1., 2., 3., 4., 5.]
+# step = 150
+# for distance in distances:
+#     with open(f'history\history_d={distance}_labels=5.json') as json_file:
+#         data = json.load(json_file)
+#         plt.plot(data['epochs'], data['test_losses'], label=str(distance))
+#         plt.legend()
+# plt.show()

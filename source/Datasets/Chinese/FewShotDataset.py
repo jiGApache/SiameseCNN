@@ -16,7 +16,7 @@ torch.manual_seed(42)
 
 
 # classes_to_classify = [59118001, 426783006, 111975006, 89792004, 67741000119109] # May be random
-classes_to_classify = [1, 2, 3, 5, 6]
+classes_to_classify = [1, 3, 5, 7, 9]
 
 class FewShotDataset(Dataset):
 
@@ -36,7 +36,7 @@ class FewShotDataset(Dataset):
             df_with_class = self.df.loc[(self.df['First_label'] == diag) & (self.df['Recording'] <= 'A2000')]
             for i in range(0, self.shot):
                 # ECGs.append(scipy.io.loadmat(f'Data\GeorgiaDataset\{self.df.loc[diag][i]}')['val'][:, :3000])
-                ECGs.append(scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{df_with_class.iloc[i]["Recording"]}.mat')['ECG'][:, :2900])
+                ECGs.append(scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{df_with_class.iloc[i]["Recording"]}.mat')['ECG'][:, 1000:4000])
         diagnoses = []
         for diag in classes_to_classify:
             for _ in range(0, self.shot):
@@ -55,9 +55,9 @@ class FewShotDataset(Dataset):
         ECGs = []
         for diag in classes_to_classify:
             df_with_class = self.df.loc[(self.df['First_label'] == diag) & (self.df['Recording'] <= 'A2000')]
-            for i in range(self.shot, 150):
+            for i in range(self.shot, 50):
                 # ECGs.append(scipy.io.loadmat(f'Data\GeorgiaDataset\{self.df.loc[diag][i]}')['val'][:, :3000])
-                ECGs.append(scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{df_with_class.iloc[i]["Recording"]}.mat')['ECG'][:, :2900])
+                ECGs.append(scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{df_with_class.iloc[i]["Recording"]}.mat')['ECG'][:, 1000:4000])
         diagnoses = []
         for diag in classes_to_classify:
             for _ in range(self.shot, 150):

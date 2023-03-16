@@ -40,7 +40,7 @@ class NoisyPairsDataset(Dataset):
 
         self.ds_len = 0
         for df in self.dfs:
-            self.ds_len += len(df) * 2
+            self.ds_len += len(df) + (len(self.labels) - 1) * len(df)
         
     def __getitem__(self, index):
 
@@ -69,16 +69,16 @@ class NoisyPairsDataset(Dataset):
         # Getting pairs for each label - different labels in pair
         for df in self.dfs:
 
-            if index < len(df):
-            
-                f_index = index
-                df_index = np.random.randint(0, len(self.labels))
-                while df.equals(self.dfs[df_index]):
-                    df_index = np.random.randint(0, len(self.labels))
-                s_index = np.random.randint(0, len(self.dfs[df_index]))
+            if index < len(df) * (len(self.dfs) - 1):
+
+                f_index = int(index / (len(self.labels) - 1))  # index of element in iterated dataframe
+                df_index = int(index % (len(self.labels) - 1)) # index of dataframe with different labels
                 
+                diff_dfs = [x for x in self.dfs if not df.equals(x)] # dataframes without iterated dataframe
+                s_index = np.random.randint(0, len(diff_dfs[df_index]))
+
                 ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{df["Recording"][f_index]}.mat')['ECG']
-                ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{self.dfs[df_index]["Recording"][s_index]}.mat')['ECG']
+                ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{diff_dfs[df_index]["Recording"][s_index]}.mat')['ECG']
                 label = 0.
 
                 return (
@@ -87,7 +87,7 @@ class NoisyPairsDataset(Dataset):
                     ), torch.as_tensor((label), dtype=torch.float32)
         
             else: 
-                index -= len(df)
+                index -= len(df) * (len(self.dfs) - 1)
                 continue
 
     def __len__(self):

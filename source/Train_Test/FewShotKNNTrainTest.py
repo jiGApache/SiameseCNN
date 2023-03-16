@@ -11,7 +11,7 @@ from Models.SiameseModel import Siamese
 from Models.EmbeddingModel import EmbeddingModule
 from sklearn.neighbors import KNeighborsClassifier
 
-def train(model, diagnoses, ECGs, n_neigh=10):    
+def train(model, diagnoses, ECGs, n_neigh=3):    
 
     embeddings = []
     with torch.no_grad():
@@ -41,7 +41,7 @@ def test(model, classifier, diagnoses, ECGs):
     print('accuracy: ', counter / len(embeddings))
 
 
-SHOT = 10
+SHOT = 3
 dataset = FewShotDataset(shot=SHOT)
 
 if __name__ == '__main__':
@@ -53,9 +53,6 @@ if __name__ == '__main__':
     # plt.show()
     # exit()
 
-    model = Siamese()
-    model.load_state_dict(torch.load('nets\SCNN.pth'))
-    model.train(False)
     # in1 = train_ECGs[2]
     # in2 = train_ECGs[3]
     # out_emb_1, out_emb_2 = model(in1, in2)
@@ -63,7 +60,7 @@ if __name__ == '__main__':
     # exit()
 
     embedding_model = EmbeddingModule()
-    embedding_model.load_state_dict(model.state_dict())
+    embedding_model.load_state_dict(torch.load('nets\SCNN_d=1.0_with_tan_5_labels.pth'))
     embedding_model.train(False)
 
     # test_ecg = train_ECGs[0]

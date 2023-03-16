@@ -36,14 +36,15 @@ def contrastive_loss(emb_1, emb_2, y):
 #########################################################
 SEED = 42
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 100
+EPOCHS = 150
 LR = 0.001
 LOSS_FUNCTION = nn.BCELoss().cuda()
 LOSS_FUNCTION = contrastive_loss
-BATCH_SIZE = 64
+BATCH_SIZE = 128
 WEIGHT_DECAY = 0.001
 THRESHHOLD = 0.5
 LOSS_MARGIN = 0. # Initializes in train\test loop
+CLASSES = [1, 3, 5, 7, 9]
 #########################################################
 
 torch.manual_seed(SEED)
@@ -57,7 +58,6 @@ def show_history(history):
 
     plt.plot(history['epochs'], history['train_losses'], label='Train loss')
     plt.plot(history['epochs'], history['test_losses'], label='Test loss')
-    # plt.ylim([0, 1.0])
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.legend()
@@ -89,12 +89,12 @@ def print_progressBar (iteration, total, prefix = '', suffix = '', decimals = 1,
 
 # full_ds = DS_Chinese(device=DEVICE, fill_with_type='mean')
 # full_ds = DS_5000()
-full_ds = DS_Noisy([1, 3, 5, 7, 9])
+full_ds = DS_Noisy(CLASSES)
 train_size = int(0.8 * full_ds.__len__())
 test_size = full_ds.__len__() - train_size
 train_ds, test_ds = random_split(full_ds, [train_size, test_size], generator=torch.Generator().manual_seed(SEED))
-train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, generator=torch.Generator().manual_seed(SEED))
-test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, generator=torch.Generator().manual_seed(SEED))
+train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, num_workers=2, persistent_workers=True, generator=torch.Generator().manual_seed(SEED))
+test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, num_workers=2, persistent_workers=True,  generator=torch.Generator().manual_seed(SEED))
 
 
 history = {
@@ -150,6 +150,8 @@ def test_epoch(epoch_counter):
         epoch_loss += loss.item()
         # correct_predictions_in_epoch += (torch.abs(out - label) < THRESHHOLD).count_nonzero().item()
 
+        del out_emb_1, out_emb_2, loss
+
         print_progressBar(steps_in_epoch, math.ceil(test_size / BATCH_SIZE), prefix=f'{epoch_counter} Test epoch progress:', length=50)
 
     return epoch_loss / steps_in_epoch #correct_predictions_in_epoch / test_size, epoch_loss / steps_in_epoch
@@ -157,7 +159,12 @@ def test_epoch(epoch_counter):
 
 if __name__ == '__main__':
 
-    distances = [0.2, 0.5, 0.7, 1., 1.5, 2., 3., 4.]
+    if not os.path.exists('history'):
+        os.mkdir('history')
+    if not os.path.exists('nets'):
+            os.mkdir('nets')
+
+    distances = [0.5, 1., 2., 3., 4., 5.]
 
     for distance in distances:
 
@@ -186,12 +193,7 @@ if __name__ == '__main__':
             # print(f'Epoch: {epoch+1}\n\tTrain accuracy: {train_acc:.5f} -- Train loss: {train_loss:.5f}\n\tTest accuracy:  {test_acc:.5f} -- Test loss:  {test_loss:.5f}\n\n')
             print(f'Epoch: {epoch+1}\tTrain loss: {train_loss:.5f}\tTest loss:  {test_loss:.5f}\n\n')
 
-        if not os.path.exists('nets'):
-            os.mkdir('nets')
-        torch.save(model.state_dict(), f'nets\SCNN_d={distance}_with_tan.pth')
+        torch.save(model.state_dict(), f'nets\SCNN_d={distance}_labels={len(CLASSES)}.pth')
 
-    if not os.path.exists('history'):
-        os.mkdir('history')
-    with open(f'history\history_with_tan.json', 'w') as history_file:
-    # with open(f'history\history_no_tan.json', 'w') as history_file:
-        history_file.write(json.dumps(history))
+        with open(f'history\history_d={distance}_labels={len(CLASSES)}.json', 'w') as history_file:
+            history_file.write(json.dumps(history))

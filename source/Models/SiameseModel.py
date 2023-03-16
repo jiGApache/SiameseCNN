@@ -29,35 +29,47 @@ class Siamese(nn.Module):
             nn.Conv1d(12, 128, kernel_size=400),
             nn.BatchNorm1d(128),
             nn.LeakyReLU(negative_slope=self.slope),
-            nn.MaxPool1d(kernel_size=10)
+
+            nn.Dropout(0.2),
+
+            nn.Conv1d(128, 128, kernel_size=12, stride=10),
+            nn.BatchNorm1d(128),
+            nn.LeakyReLU(negative_slope=self.slope)#,
+
+            # nn.MaxPool1d(kernel_size=10)
         )
 
         self.conv2 = nn.Sequential(
             nn.Dropout(0.2),
-            nn.Conv1d(128, 64, kernel_size=40),
-            nn.BatchNorm1d(64),
+            nn.Conv1d(128, 256, kernel_size=40),
+            nn.BatchNorm1d(256),
             nn.LeakyReLU(negative_slope=self.slope),
-            nn.MaxPool1d(kernel_size=10)
+
+            nn.Dropout(0.2),
+
+            nn.Conv1d(256, 256, kernel_size=12, stride=10),
+            nn.BatchNorm1d(256),
+            nn.LeakyReLU(negative_slope=self.slope)#,
+
+            # nn.MaxPool1d(kernel_size=10)
         )
 
         self.conv3 = nn.Sequential(
-            nn.Conv1d(64, 64, kernel_size=4),
-            nn.BatchNorm1d(64),
+            nn.Dropout(0.2),
+
+            nn.Conv1d(256, 16, kernel_size=4),
+            nn.BatchNorm1d(16),
             nn.LeakyReLU(negative_slope=self.slope),
-            nn.MaxPool1d(kernel_size=8),
+
+            nn.Dropout(0.2),
+
+            nn.Conv1d(16, 16, kernel_size=12, stride=10),
+            nn.BatchNorm1d(16),
+            nn.LeakyReLU(negative_slope=self.slope),
+
+            # nn.MaxPool1d(kernel_size=8),
             nn.Flatten(start_dim=1),
             nn.Tanh()
-        )
-
-        self.embedding = nn.Sequential(
-            nn.Flatten(start_dim=1),
-            nn.Linear(2 * 32, 16),
-            nn.Tanh()
-        )
-
-        self.classifier = nn.Sequential(
-            nn.Linear(16, 1),
-            nn.Sigmoid()
         )
 
 
