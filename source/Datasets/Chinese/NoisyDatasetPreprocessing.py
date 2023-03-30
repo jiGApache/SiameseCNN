@@ -11,22 +11,22 @@ np.random.seed(42)
 FRAGMENT_SIZE = 3000    # or KERNEL_SIZE
 STEP_SIZE = 1500        # or STRIDE
 df = pd.read_csv('Data\ChineseDataset\REFERENCE.csv', delimiter=',')
-df = df.loc[df['Recording'] <= 'A2000'].reset_index(drop=True)
+df = df.loc[df['Recording'] <= 'A4470'].reset_index(drop=True)
 dataset_size = len(df)
 total_data = []
 
-def prepare_dataset(path='Data\ChineseDataset\PreparedDataset_Noisy\\'):
+def prepare_dataset(path='Data\ChineseDataset\\1\PreparedDataset_Noisy\\'):
 
 
-    if not os.path.exists('Data\ChineseDataset\FilteredECG') or len(os.listdir('Data\ChineseDataset\FilteredECG')) == 0:
-        os.mkdir('Data\ChineseDataset\FilteredECG')
+    if not os.path.exists('Data\ChineseDataset\\1\FilteredECG') or len(os.listdir('Data\ChineseDataset\\1\FilteredECG')) == 0:
+        os.mkdir('Data\ChineseDataset\\1\FilteredECG')
         for i in range(dataset_size):
-            ecg = scipy.io.loadmat('Data\ChineseDataset\TrainingSet1\\' + df['Recording'][i] + '.mat')['ECG'][0][0][2]
+            ecg = scipy.io.loadmat('Data\ChineseDataset\\1\TrainingSet3\\' + df['Recording'][i] + '.mat')['ECG'][0][0][2]
         
             ### Filtering EKG
             ecg = filter_ecg(ecg)
 
-            scipy.io.savemat(f'Data\ChineseDataset\FilteredECG\{df["Recording"][i]}.mat', {'ECG': ecg})
+            scipy.io.savemat(f'Data\ChineseDataset\\1\FilteredECG\{df["Recording"][i]}.mat', {'ECG': ecg})
 
             recording = [ecg[:, 100:100+FRAGMENT_SIZE], df['Recording'][i]]        
             total_data.append(recording)
@@ -36,7 +36,7 @@ def prepare_dataset(path='Data\ChineseDataset\PreparedDataset_Noisy\\'):
 
     else:
         for i in range(dataset_size):
-            ecg = scipy.io.loadmat(f'Data\ChineseDataset\FilteredECG\{df["Recording"][i]}.mat')['ECG'][:, 100:100+FRAGMENT_SIZE]
+            ecg = scipy.io.loadmat(f'Data\ChineseDataset\\1\FilteredECG\{df["Recording"][i]}.mat')['ECG'][:, 100:100+FRAGMENT_SIZE]
 
             recording = [ecg, df['Recording'][i]]
             total_data.append(recording)
@@ -76,7 +76,7 @@ def get_channel_means_stds(total_data):
     ECGs = []
     for i in range(len(total_data)):
         ECGs.append(total_data[i][0])
-
+    
     ECGs = np.asarray(ECGs)
     means = ECGs.mean(axis=(0,2))
     stds = ECGs.std(axis=(0,2))

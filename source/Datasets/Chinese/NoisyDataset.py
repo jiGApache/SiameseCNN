@@ -10,25 +10,32 @@ import pandas as pd
 
 class NoisyPairsDataset(Dataset):
     
-    def __init__(self, labels = [1, 2], WITH_ROLL=False):
+    def __init__(self, labels = [3, 5], WITH_ROLL=False):
 
         random.seed(42)
         np.random.seed(42)
         torch.manual_seed(42)
         torch.cuda.manual_seed(42)
 
-        self.path_append = ''
-        if WITH_ROLL: self.path_append = '_Rolled'
+        # Preparing dataset #########################################################################
+        self.path_append = '_Rolled' if WITH_ROLL == True else ''
+        if (not os.path.exists(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}')):
+            os.mkdir(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}')
+        if (len(os.listdir(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}')) == 0):
+            prepare_dataset(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}\\')
+        #############################################################################################
 
-        if (not os.path.exists(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}')):
-            os.mkdir(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}')
-        if (len(os.listdir(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}')) == 0):
-            prepare_dataset(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\\')
-
+        self.NORMAL_LABEL = 1
         self.labels = labels
 
         df = pd.read_csv('Data\ChineseDataset\REFERENCE.csv', delimiter=',')
-        df = df.loc[df['Recording'] <= 'A2000']
+        df = df.loc[df['Recording'] <= 'A4470']
+
+        self.normal_df = df.loc[
+                (df['First_label'] == self.NORMAL_LABEL) | \
+                (df['Second_label'] == self.NORMAL_LABEL) | \
+                (df['Third_label'] == self.NORMAL_LABEL)
+            ].reset_index(drop=True)
 
         self.dfs = []
         for label in self.labels:
@@ -38,57 +45,62 @@ class NoisyPairsDataset(Dataset):
                 (df['Third_label'] == label)
             ].reset_index(drop=True))
 
-        self.ds_len = 0
-        for df in self.dfs:
-            self.ds_len += len(df) + (len(self.labels) - 1) * len(df)
+        self.ds_len = len(self.normal_df) * 2 + len(self.normal_df) * len(self.dfs)
         
     def __getitem__(self, index):
 
-        # Getting pairs for each label - same labels in pair
-        for df in self.dfs:
+        # Pairs with equal normal labels | step = 1
+        if index < len(self.normal_df):
 
-            if index < len(df):
-                
-                f_index = index
-                s_index = (index + 1) % len(df)
+            f_index = index
+            s_index = (index + 1) % len(self.normal_df)
 
-                ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{df["Recording"][f_index]}.mat')['ECG']
-                ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{df["Recording"][s_index]}.mat')['ECG']
-                label = 1.
+            ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][f_index]}.mat')['ECG']
+            ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][s_index]}.mat')['ECG']
+            label = 1.
 
-                return (
-                        torch.as_tensor(ecg1, dtype=torch.float32),
-                        torch.as_tensor(ecg2, dtype=torch.float32),
-                    ), torch.as_tensor((label), dtype=torch.float32)
+            return (
+                    torch.as_tensor(ecg1, dtype=torch.float32),
+                    torch.as_tensor(ecg2, dtype=torch.float32),
+                ), torch.as_tensor((label), dtype=torch.float32)
             
-            else: 
-                index -= len(df)
-                continue
+        else: index -= len(self.normal_df)     
+
+        # Pairs with equal normal labels | step = (amount of normal ECG) // 2
+        if index < len(self.normal_df):
+
+            f_index = index
+            s_index = (index + len(self.normal_df) // 2) % len(self.normal_df)
+
+            ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][f_index]}.mat')['ECG']
+            ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][s_index]}.mat')['ECG']
+            label = 1.
+
+            return (
+                    torch.as_tensor(ecg1, dtype=torch.float32),
+                    torch.as_tensor(ecg2, dtype=torch.float32),
+                ), torch.as_tensor((label), dtype=torch.float32)
+            
+        else: index -= len(self.normal_df)        
+        
+
 
         
-        # Getting pairs for each label - different labels in pair
-        for df in self.dfs:
+        # Getting pairs for normal label - different labels in pair
 
-            if index < len(df) * (len(self.dfs) - 1):
+        f_index = index // len(self.dfs)
 
-                f_index = int(index / (len(self.labels) - 1))  # index of element in iterated dataframe
-                df_index = int(index % (len(self.labels) - 1)) # index of dataframe with different labels
-                
-                diff_dfs = [x for x in self.dfs if not df.equals(x)] # dataframes without iterated dataframe
-                s_index = np.random.randint(0, len(diff_dfs[df_index]))
+        df = self.dfs[index % len(self.dfs)]
+        s_index = np.random.randint(0, len(df))
 
-                ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{df["Recording"][f_index]}.mat')['ECG']
-                ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\PreparedDataset_Noisy{self.path_append}\{diff_dfs[df_index]["Recording"][s_index]}.mat')['ECG']
-                label = 0.
+        ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][f_index]}.mat')['ECG']
+        ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}\{df["Recording"][s_index]}.mat')['ECG']
+        label = 0.
 
-                return (
-                        torch.as_tensor(ecg1, dtype=torch.float32),
-                        torch.as_tensor(ecg2, dtype=torch.float32),
-                    ), torch.as_tensor((label), dtype=torch.float32)
-        
-            else: 
-                index -= len(df) * (len(self.dfs) - 1)
-                continue
+        return (
+                torch.as_tensor(ecg1, dtype=torch.float32),
+                torch.as_tensor(ecg2, dtype=torch.float32),
+            ), torch.as_tensor((label), dtype=torch.float32)
 
     def __len__(self):
         return  self.ds_len

@@ -30,13 +30,13 @@ class Siamese(nn.Module):
             nn.BatchNorm1d(128),
             nn.LeakyReLU(negative_slope=self.slope),
 
-            nn.Dropout(0.2),
+            # nn.Dropout(0.2),
 
-            nn.Conv1d(128, 128, kernel_size=12, stride=10),
-            nn.BatchNorm1d(128),
-            nn.LeakyReLU(negative_slope=self.slope)#,
+            # nn.Conv1d(128, 128, kernel_size=12, stride=10),
+            # nn.BatchNorm1d(128),
+            # nn.LeakyReLU(negative_slope=self.slope)#,
 
-            # nn.MaxPool1d(kernel_size=10)
+            nn.MaxPool1d(kernel_size=10)
         )
 
         self.conv2 = nn.Sequential(
@@ -45,13 +45,13 @@ class Siamese(nn.Module):
             nn.BatchNorm1d(256),
             nn.LeakyReLU(negative_slope=self.slope),
 
-            nn.Dropout(0.2),
+            # nn.Dropout(0.2),
 
-            nn.Conv1d(256, 256, kernel_size=12, stride=10),
-            nn.BatchNorm1d(256),
-            nn.LeakyReLU(negative_slope=self.slope)#,
+            # nn.Conv1d(256, 256, kernel_size=12, stride=10),
+            # nn.BatchNorm1d(256),
+            # nn.LeakyReLU(negative_slope=self.slope)#,
 
-            # nn.MaxPool1d(kernel_size=10)
+            nn.MaxPool1d(kernel_size=10)
         )
 
         self.conv3 = nn.Sequential(
@@ -61,13 +61,13 @@ class Siamese(nn.Module):
             nn.BatchNorm1d(16),
             nn.LeakyReLU(negative_slope=self.slope),
 
-            nn.Dropout(0.2),
+            # nn.Dropout(0.2),
 
-            nn.Conv1d(16, 16, kernel_size=12, stride=10),
-            nn.BatchNorm1d(16),
-            nn.LeakyReLU(negative_slope=self.slope),
+            # nn.Conv1d(16, 16, kernel_size=12, stride=10),
+            # nn.BatchNorm1d(16),
+            # nn.LeakyReLU(negative_slope=self.slope),
 
-            # nn.MaxPool1d(kernel_size=8),
+            nn.MaxPool1d(kernel_size=8),
             nn.Flatten(start_dim=1),
             nn.Tanh()
         )
