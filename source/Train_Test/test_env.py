@@ -51,11 +51,13 @@ from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 normal_label = 1
 abnormal_labels = [8, 9]
 # abnormal_labels = [2, 4, 6, 8]
+ELEMENTS_PER_CLASS = 50
 
-# PCA = 1
-# UMAP = 2
+# PCA - 1 | UMAP - 2
 METHOD = 2
 
+DATA_TYPE = 'Test'
+# DATA_TYPE = 'Train'
 
 distances = [1., 2., 3., 4., 8., 20.]
 for plot_index, distance in enumerate(distances):
@@ -67,19 +69,22 @@ for plot_index, distance in enumerate(distances):
 
     normal_ECGs = []
     abnormal_ECGs = []
+
+
     df = pd.read_csv('Data\ChineseDataset\REFERENCE.csv', delimiter=',')
-    # df = df.loc[df['Recording'] <= 'A4470'].reset_index(drop=True)
-    df = df.loc[df['Recording'] >= 'A4471'].reset_index(drop=True)
-    ELEMENTS_PER_CLASS = 50
+    if DATA_TYPE == 'Test': df = df.loc[df['Recording'] <= 'A4470'].reset_index(drop=True)
+    else:                   df = df.loc[df['Recording'] >= 'A4471'].reset_index(drop=True)
 
     normal_df = df.loc[(df['First_label'] == normal_label)].reset_index(drop=True)
     for i in range(ELEMENTS_PER_CLASS):
-        normal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\\3\PreparedDataset_Noisy\{normal_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
+        normal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\NormFilteredECG\{normal_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
+        normal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\NormECG\{normal_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
 
     for label in abnormal_labels:
         labeld_df = df.loc[((df['First_label'] == label) | (df['Second_label'] == label) | (df['Third_label'] == label))].reset_index(drop=True)
         for i in range(ELEMENTS_PER_CLASS):
-            abnormal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\\3\PreparedDataset_Noisy\{labeld_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
+            abnormal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\NormFilteredECG\{labeld_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
+            abnormal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\NormECG\{labeld_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
 
 
     normal_embeddings = []

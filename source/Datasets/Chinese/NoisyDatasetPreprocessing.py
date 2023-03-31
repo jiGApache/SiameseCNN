@@ -8,65 +8,121 @@ import math
 
 np.random.seed(42)
 
-FRAGMENT_SIZE = 3000    # or KERNEL_SIZE
-STEP_SIZE = 1500        # or STRIDE
-df = pd.read_csv('Data\ChineseDataset\REFERENCE.csv', delimiter=',')
-df = df.loc[df['Recording'] <= 'A4470'].reset_index(drop=True)
-dataset_size = len(df)
-total_data = []
+FRAGMENT_SIZE = 3000
 
-def prepare_dataset(path='Data\ChineseDataset\\1\PreparedDataset_Noisy\\'):
+def prepare_dataset(path='Data\ChineseDataset'):
+
+    df = pd.read_csv(f'{path}\REFERENCE.csv', delimiter=',')
+    train_df = df.loc[df['Recording'] <= 'A4470'].reset_index(drop=True)
+    test_df = df.loc[df['Recording'] >= 'A4471'].reset_index(drop=True)
+    total_data = []
 
 
-    if not os.path.exists('Data\ChineseDataset\\1\FilteredECG') or len(os.listdir('Data\ChineseDataset\\1\FilteredECG')) == 0:
-        os.mkdir('Data\ChineseDataset\\1\FilteredECG')
-        for i in range(dataset_size):
-            ecg = scipy.io.loadmat('Data\ChineseDataset\\1\TrainingSet3\\' + df['Recording'][i] + '.mat')['ECG'][0][0][2]
+
+    ### Filtering Train Data
+    if not os.path.exists(f'{path}\Train\FilteredECG'): os.mkdir(f'{path}\Train\FilteredECG')
+    if len(os.listdir(f'{path}\Train\FilteredECG')) == 0:
+        for i in range(len(train_df)):
+            ecg = scipy.io.loadmat(f'{path}\Train\InitialSet\{train_df["Recording"][i]}.mat')['ECG'][0][0][2]
+        
+            ecg = filter_ecg(ecg)[:, 100:FRAGMENT_SIZE+100]
+
+            scipy.io.savemat(f'{path}\Train\FilteredECG\{train_df["Recording"][i]}.mat', {'ECG': ecg})
+
+            recording = [ecg, train_df['Recording'][i]]        
+            total_data.append(recording)
+
+            print_progressBar(i+1, len(train_df), prefix='Filtering Train ECG:', length=50)
+    else:
+        for i in range(len(train_df)):
+            ecg = scipy.io.loadmat(f'{path}\Train\FilteredECG\{train_df["Recording"][i]}.mat')['ECG']
+
+            recording = [ecg, train_df['Recording'][i]]
+            total_data.append(recording)
+
+            print_progressBar(i+1, len(train_df), prefix='Filtering Train ECG:', length=50)
+    
+    ### Filtering Test Data
+    if not os.path.exists(f'{path}\Test\FilteredECG'): os.mkdir(f'{path}\Test\FilteredECG')
+    if len(os.listdir(f'{path}\Test\FilteredECG')) == 0:
+        for i in range(len(test_df)):
+            ecg = scipy.io.loadmat(f'{path}\Test\InitialSet\{test_df["Recording"][i]}.mat')['ECG'][0][0][2]
         
             ### Filtering EKG
-            ecg = filter_ecg(ecg)
+            ecg = filter_ecg(ecg)[:, 100:FRAGMENT_SIZE+100]
 
-            scipy.io.savemat(f'Data\ChineseDataset\\1\FilteredECG\{df["Recording"][i]}.mat', {'ECG': ecg})
+            scipy.io.savemat(f'{path}\Test\FilteredECG\{test_df["Recording"][i]}.mat', {'ECG': ecg})
 
-            recording = [ecg[:, 100:100+FRAGMENT_SIZE], df['Recording'][i]]        
+            recording = [ecg, test_df['Recording'][i]]        
             total_data.append(recording)
 
-            print_progressBar(i+1, dataset_size, prefix='Filtering ECG:', length=50)
-
-
+            print_progressBar(i+1, len(test_df), prefix='Filtering Test ECG:', length=50)
     else:
-        for i in range(dataset_size):
-            ecg = scipy.io.loadmat(f'Data\ChineseDataset\\1\FilteredECG\{df["Recording"][i]}.mat')['ECG'][:, 100:100+FRAGMENT_SIZE]
+        for i in range(len(test_df)):
+            ecg = scipy.io.loadmat(f'{path}\Test\FilteredECG\{test_df["Recording"][i]}.mat')['ECG']
 
-            recording = [ecg, df['Recording'][i]]
+            recording = [ecg, test_df['Recording'][i]]
             total_data.append(recording)
 
-            print_progressBar(i+1, dataset_size, prefix='Filtering ECG:', length=50)
+            print_progressBar(i+1, len(test_df), prefix='Filtering Test ECG:', length=50)
 
-    print("Filtering done! Starting channel-wise ECG normalization...")
-
-
-    ## Channel-wise normalization
-    channel_means, channel_stds = get_channel_means_stds(total_data)
-    for i, recording in enumerate(total_data):
-        for j in range(12):
-            recording[0][j] = (recording[0][j] - channel_means[j]) / channel_stds[j]
-        print_progressBar(i+1, dataset_size, prefix='Normalizing ECG:', length=50)
-
-    print(f"Normaization done! Saving data to {path}")
+    print("Filtering done!")
 
 
-    for i, recording in enumerate(total_data):
 
-        noise = get_baseline_noise()
+    
+    channel_means, channel_stds = get_channel_means_stds(total_data[:len(train_df)])
 
-        if 'Rolled' in path:
-            roll = np.random.randint(-1500, 1500)
-            scipy.io.savemat(f'{path}{recording[1]}.mat', {'ECG': np.roll(recording[0] + noise, roll, axis=1)})
-        else:
-            scipy.io.savemat(f'{path}{recording[1]}.mat', {'ECG': recording[0] + noise})
+    ## Normalizing filtered data
+    if not os.path.exists(f'{path}\Train\\NormFilteredECG'): os.mkdir(f'{path}\Train\\NormFilteredECG')
+    if not os.path.exists(f'{path}\Test\\NormFilteredECG'): os.mkdir(f'{path}\Test\\NormFilteredECG')
+    if len(os.listdir(f'{path}\Train\\NormFilteredECG')) == 0 or len(os.listdir(f'{path}\Test\\NormFilteredECG')) == 0:
+        for i, recording in enumerate(total_data):
+            
+            for j in range(12):
+                recording[0][j] = (recording[0][j] - channel_means[j]) / channel_stds[j]
 
-        print_progressBar(i+1, dataset_size, prefix='Saving:', length=50)
+            if i < len(train_df): scipy.io.savemat(f'{path}\Train\\NormFilteredECG\{recording[1]}.mat', {'ECG': recording[0]})
+            else:                 scipy.io.savemat(f'{path}\Test\\NormFilteredECG\{recording[1]}.mat', {'ECG': recording[0]})
+
+            print_progressBar(i+1, len(total_data), prefix='Normalizing filtered ECG:', length=50)
+
+    print(f"Filtered ECG normaization done!")
+
+
+    
+    del total_data
+
+
+
+    ## Normalizing initial data
+    if not os.path.exists(f'{path}\Train\\NormECG'): os.mkdir(f'{path}\Train\\NormECG')
+    if not os.path.exists(f'{path}\Test\\NormECG'): os.mkdir(f'{path}\Test\\NormECG')
+    if len(os.listdir(f'{path}\Train\\NormECG')) == 0 or len(os.listdir(f'{path}\Test\\NormECG')) == 0:
+        for i in range(len(train_df) + len(test_df)):
+            
+            if i < len(train_df): 
+                ecg = scipy.io.loadmat(f'{path}\Train\InitialSet\{train_df["Recording"][i]}.mat')['ECG'][0][0][2][:, 100:FRAGMENT_SIZE+100]
+
+                for j in range(12):
+                    ecg[0][j] = (ecg[0][j] - channel_means[j]) / channel_stds[j]
+
+                scipy.io.savemat(f'{path}\Train\\NormECG\{train_df["Recording"][i]}.mat', {'ECG': ecg})
+
+            else: 
+                cp_i = i % len(train_df)
+                ecg = scipy.io.loadmat(f'{path}\Test\InitialSet\{test_df["Recording"][cp_i]}.mat')['ECG'][0][0][2][:, 100:FRAGMENT_SIZE+100]
+
+                for j in range(12):
+                    ecg[0][j] = (ecg[0][j] - channel_means[j]) / channel_stds[j]
+
+                scipy.io.savemat(f'{path}\Test\\NormECG\{test_df["Recording"][cp_i]}.mat', {'ECG': ecg})
+
+            print_progressBar(i+1, (len(train_df) + len(test_df)), prefix='Normalizing Initial ECG:', length=50)
+
+    print(f"Initial ECG normaization done!")
+
+
 
     print("Dataset preparation complete!")
 
@@ -84,21 +140,6 @@ def get_channel_means_stds(total_data):
     del ECGs
 
     return means, stds
-
-def get_baseline_noise():
-    
-    #Baseline wander
-    L = FRAGMENT_SIZE
-    x = np.linspace(0, L, L)
-    A = np.random.uniform(0.2, 0.4)
-    T = 2 * L
-    PHI = np.random.uniform(0, 2 * math.pi)
-    wander = []
-    for j in x:
-        wander.append(A * np.cos(2 * math.pi * (j/T) + PHI))
-    wander = np.asarray(wander)
-    
-    return np.tile(wander, (12,1))
 
 def print_progressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
     """

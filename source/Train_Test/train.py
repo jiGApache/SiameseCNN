@@ -36,7 +36,7 @@ def contrastive_loss(emb_1, emb_2, y):
 #########################################################
 SEED = 42
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 10
+EPOCHS = 100
 
 LR = 0.001
 STEP_SIZE = EPOCHS / 5
@@ -95,7 +95,7 @@ train_size = int(0.8 * full_ds.__len__())
 test_size = full_ds.__len__() - train_size
 train_ds, test_ds = random_split(full_ds, [train_size, test_size], generator=torch.Generator().manual_seed(SEED))
 train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, num_workers=2, persistent_workers=True, generator=torch.Generator().manual_seed(SEED))
-test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, num_workers=2, persistent_workers=True,  generator=torch.Generator().manual_seed(SEED))
+test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, generator=torch.Generator().manual_seed(SEED))
 
 
 def train_epoch(epoch_counter):

@@ -18,11 +18,7 @@ class NoisyPairsDataset(Dataset):
         torch.cuda.manual_seed(42)
 
         # Preparing dataset #########################################################################
-        self.path_append = '_Rolled' if WITH_ROLL == True else ''
-        if (not os.path.exists(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}')):
-            os.mkdir(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}')
-        if (len(os.listdir(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}')) == 0):
-            prepare_dataset(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}\\')
+        if not self.is_data_ready(): prepare_dataset(f'Data\ChineseDataset')
         #############################################################################################
 
         self.NORMAL_LABEL = 1
@@ -30,77 +26,77 @@ class NoisyPairsDataset(Dataset):
 
         df = pd.read_csv('Data\ChineseDataset\REFERENCE.csv', delimiter=',')
         df = df.loc[df['Recording'] <= 'A4470']
+        
 
-        self.normal_df = df.loc[
+
+        DATA_TYPES = ['NormFilteredECG', 'NormECG']
+
+
+
+        self.normal_data = []
+        normal_df = df.loc[
                 (df['First_label'] == self.NORMAL_LABEL) | \
                 (df['Second_label'] == self.NORMAL_LABEL) | \
                 (df['Third_label'] == self.NORMAL_LABEL)
             ].reset_index(drop=True)
 
-        self.dfs = []
-        for label in self.labels:
-            self.dfs.append(df.loc[
+        for DATA_TYPE in DATA_TYPES:
+            for i in range(len(normal_df)):
+                self.normal_data.append(scipy.io.loadmat(f'Data\ChineseDataset\Train\{DATA_TYPE}\{normal_df["Recording"][i]}.mat')['ECG'])
+
+
+
+        self.abnormal_data = []
+        for label in labels:
+
+            abnormal_d = []
+            abnormal_df = df.loc[
                 (df['First_label'] == label) | \
                 (df['Second_label'] == label) | \
                 (df['Third_label'] == label)
-            ].reset_index(drop=True))
+            ].reset_index(drop=True)
 
-        self.ds_len = len(self.normal_df) * 2 + len(self.normal_df) * len(self.dfs)
+            for DATA_TYPE in DATA_TYPES:
+                for i in range(len(abnormal_df)):
+                    abnormal_d.append(scipy.io.loadmat(f'Data\ChineseDataset\Train\{DATA_TYPE}\{abnormal_df["Recording"][i]}.mat')['ECG'])
+
+            self.abnormal_data.append(abnormal_d)
+
+        self.ds_len = 0
+        self.ds_len += len(self.normal_data) + len(self.normal_data) * len(self.abnormal_data)
         
     def __getitem__(self, index):
 
-        # Pairs with equal normal labels | step = 1
-        if index < len(self.normal_df):
+        # Pairs with equal normal labels
+        if index < len(self.normal_data):
 
             f_index = index
-            s_index = (index + 1) % len(self.normal_df)
-
-            ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][f_index]}.mat')['ECG']
-            ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][s_index]}.mat')['ECG']
-            label = 1.
+            s_index = np.random.randint(0, len(self.normal_data))
 
             return (
-                    torch.as_tensor(ecg1, dtype=torch.float32),
-                    torch.as_tensor(ecg2, dtype=torch.float32),
-                ), torch.as_tensor((label), dtype=torch.float32)
+                    torch.as_tensor(self.normal_data[f_index], dtype=torch.float32),
+                    torch.as_tensor(self.normal_data[s_index], dtype=torch.float32),
+                ), torch.as_tensor((1.), dtype=torch.float32)
             
-        else: index -= len(self.normal_df)     
-
-        # Pairs with equal normal labels | step = (amount of normal ECG) // 2
-        if index < len(self.normal_df):
-
-            f_index = index
-            s_index = (index + len(self.normal_df) // 2) % len(self.normal_df)
-
-            ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][f_index]}.mat')['ECG']
-            ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][s_index]}.mat')['ECG']
-            label = 1.
-
-            return (
-                    torch.as_tensor(ecg1, dtype=torch.float32),
-                    torch.as_tensor(ecg2, dtype=torch.float32),
-                ), torch.as_tensor((label), dtype=torch.float32)
-            
-        else: index -= len(self.normal_df)        
+        else: index -= len(self.normal_data)      
         
 
 
-        
-        # Getting pairs for normal label - different labels in pair
-
-        f_index = index // len(self.dfs)
-
-        df = self.dfs[index % len(self.dfs)]
-        s_index = np.random.randint(0, len(df))
-
-        ecg1 = scipy.io.loadmat(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}\{self.normal_df["Recording"][f_index]}.mat')['ECG']
-        ecg2 = scipy.io.loadmat(f'Data\ChineseDataset\\1\PreparedDataset_Noisy{self.path_append}\{df["Recording"][s_index]}.mat')['ECG']
-        label = 0.
+        # Pairs with different labels (norm & abnorm)
+        f_index = index // len(self.abnormal_data)
+        abnormal_d = self.abnormal_data[index % len(self.abnormal_data)]
+        s_index = np.random.randint(0, len(abnormal_d))
 
         return (
-                torch.as_tensor(ecg1, dtype=torch.float32),
-                torch.as_tensor(ecg2, dtype=torch.float32),
-            ), torch.as_tensor((label), dtype=torch.float32)
+                torch.as_tensor(self.normal_data[f_index], dtype=torch.float32),
+                torch.as_tensor(abnormal_d[s_index], dtype=torch.float32),
+            ), torch.as_tensor((0.), dtype=torch.float32)
 
     def __len__(self):
         return  self.ds_len
+
+    def is_data_ready(self):
+        return os.path.exists('Data\ChineseDataset\Train\\NormFilteredECG') \
+            and os.path.exists('Data\ChineseDataset\Train\\NormECG') \
+                and len(os.listdir('Data\ChineseDataset\Train\\NormFilteredECG')) != 0 \
+                    and len(os.listdir('Data\ChineseDataset\Train\\NormECG')) != 0
