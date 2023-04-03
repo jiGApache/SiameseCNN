@@ -37,7 +37,14 @@ from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 
 ################################################################################
 
-# # ecg = scipy.io.loadmat('Data\ChineseDataset\TrainingSet1\A0011.mat')['ECG'][0][0][2][:, :5000]
+ecg = scipy.io.loadmat('Data\ChineseDataset\Train\InitialSet\A0021.mat')['ECG'][0][0][2]
+from Filtering.Neurokit2Filters import filter_ecg
+plt.subplot(2, 1, 1)
+plt.plot(ecg[2])
+ecg = filter_ecg(ecg)
+plt.subplot(2, 1, 2)
+plt.plot(ecg[2])
+plt.show()
 # ecg = scipy.io.loadmat('Data\ChineseDataset\FilteredECG\A0011.mat')['ECG'][:, :5000]
 # # ecg = scipy.io.loadmat('Data\ChineseDataset\PreparedDataset_Noisy\A0011.mat')['ECG']
 # plt.plot(ecg[0])
@@ -48,95 +55,95 @@ from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 ################################################################################
 
 
-normal_label = 1
-abnormal_labels = [8, 9]
-# abnormal_labels = [2, 4, 6, 8]
-ELEMENTS_PER_CLASS = 50
+# normal_label = 1
+# abnormal_labels = [8, 9]
+# # abnormal_labels = [2, 4, 6, 8]
+# ELEMENTS_PER_CLASS = 50
 
-# PCA - 1 | UMAP - 2
-METHOD = 2
+# # PCA - 1 | UMAP - 2
+# METHOD = 2
 
-DATA_TYPE = 'Test'
-# DATA_TYPE = 'Train'
+# DATA_TYPE = 'Test'
+# # DATA_TYPE = 'Train'
 
-distances = [1., 2., 3., 4., 8., 20.]
-for plot_index, distance in enumerate(distances):
+# nets = os.listdir('nets')
+# for plot_index, net in enumerate(nets):
 
-    embedding_model = EmbeddingModule()
-    embedding_model.load_state_dict(torch.load(f'nets\SCNN_d={distance}_labels=2.pth'))
-    embedding_model.train(False)
-
-
-    normal_ECGs = []
-    abnormal_ECGs = []
+#     embedding_model = EmbeddingModule()
+#     embedding_model.load_state_dict(torch.load(f'nets/{net}'))
+#     embedding_model.train(False)
 
 
-    df = pd.read_csv('Data\ChineseDataset\REFERENCE.csv', delimiter=',')
-    if DATA_TYPE == 'Test': df = df.loc[df['Recording'] <= 'A4470'].reset_index(drop=True)
-    else:                   df = df.loc[df['Recording'] >= 'A4471'].reset_index(drop=True)
-
-    normal_df = df.loc[(df['First_label'] == normal_label)].reset_index(drop=True)
-    for i in range(ELEMENTS_PER_CLASS):
-        normal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\NormFilteredECG\{normal_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
-        normal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\NormECG\{normal_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
-
-    for label in abnormal_labels:
-        labeld_df = df.loc[((df['First_label'] == label) | (df['Second_label'] == label) | (df['Third_label'] == label))].reset_index(drop=True)
-        for i in range(ELEMENTS_PER_CLASS):
-            abnormal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\NormFilteredECG\{labeld_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
-            abnormal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\NormECG\{labeld_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
+#     normal_ECGs = []
+#     abnormal_ECGs = []
 
 
-    normal_embeddings = []
-    abnormal_embeddings = []
+#     df = pd.read_csv('Data\ChineseDataset\REFERENCE.csv', delimiter=',')
+#     if DATA_TYPE == 'Train': df = df.loc[df['Recording'] <= 'A4470'].reset_index(drop=True)
+#     else:                   df = df.loc[df['Recording'] >= 'A4471'].reset_index(drop=True)
 
-    for ecg in normal_ECGs:
-        normal_embeddings.append(torch.squeeze(embedding_model(ecg)).detach().numpy())
+#     normal_df = df.loc[(df['First_label'] == normal_label)].reset_index(drop=True)
+#     for i in range(ELEMENTS_PER_CLASS):
+#         normal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\\NormFilteredECG\{normal_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
+#         normal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\\NormECG\{normal_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
 
-    for ecg in abnormal_ECGs:
-        abnormal_embeddings.append(torch.squeeze(embedding_model(ecg)).detach().numpy())
-
-
-
-    if METHOD == 1:
-        from sklearn.decomposition import PCA
-        pca = PCA(n_components=2, svd_solver='full')
-        pca.fit(abnormal_embeddings + normal_embeddings)
-        tf_normal_embeds = pca.transform(normal_embeddings)
-        if len(abnormal_labels) > 0: tf_abnormal_embeds = pca.transform(abnormal_embeddings)
-    else:
-        import umap
-        fit = umap.UMAP()
-        fit.fit(abnormal_embeddings + normal_embeddings)
-        tf_normal_embeds = fit.transform(normal_embeddings)
-        if len(abnormal_labels) > 0: tf_abnormal_embeds = fit.transform(abnormal_embeddings)
+#     for label in abnormal_labels:
+#         labeld_df = df.loc[((df['First_label'] == label) | (df['Second_label'] == label) | (df['Third_label'] == label))].reset_index(drop=True)
+#         for i in range(ELEMENTS_PER_CLASS):
+#             abnormal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\\NormFilteredECG\{labeld_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
+#             abnormal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\\NormECG\{labeld_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
 
 
-    plt.subplot(2, 3, plot_index+1)
-    plt.subplot(2, 3, plot_index+1).set_xlabel(f'd={distance}')
-    plt.scatter(
-        tf_normal_embeds[:, 0],
-        tf_normal_embeds[:, 1],
-        label='normal')
-    plt.scatter(
-        tf_abnormal_embeds[:, 0],
-        tf_abnormal_embeds[:, 1],
-        label='abnormal')
+#     normal_embeddings = []
+#     abnormal_embeddings = []
 
-    plt.margins(0.35, 0.35)
-    plt.legend()
+#     for ecg in normal_ECGs:
+#         normal_embeddings.append(torch.squeeze(embedding_model(ecg)).detach().numpy())
+
+#     for ecg in abnormal_ECGs:
+#         abnormal_embeddings.append(torch.squeeze(embedding_model(ecg)).detach().numpy())
+
+
+
+#     if METHOD == 1:
+#         from sklearn.decomposition import PCA
+#         pca = PCA(n_components=2, svd_solver='full')
+#         pca.fit(abnormal_embeddings + normal_embeddings)
+#         tf_normal_embeds = pca.transform(normal_embeddings)
+#         if len(abnormal_labels) > 0: tf_abnormal_embeds = pca.transform(abnormal_embeddings)
+#     else:
+#         import umap
+#         fit = umap.UMAP()
+#         fit.fit(abnormal_embeddings + normal_embeddings)
+#         tf_normal_embeds = fit.transform(normal_embeddings)
+#         if len(abnormal_labels) > 0: tf_abnormal_embeds = fit.transform(abnormal_embeddings)
+
+
+#     plt.subplot(2, 3, plot_index+1)
+#     plt.subplot(2, 3, plot_index+1).set_xlabel(net)
+#     plt.scatter(
+#         tf_normal_embeds[:, 0],
+#         tf_normal_embeds[:, 1],
+#         label='normal')
+#     plt.scatter(
+#         tf_abnormal_embeds[:, 0],
+#         tf_abnormal_embeds[:, 1],
+#         label='abnormal')
+
+#     plt.margins(0.35, 0.35)
+#     plt.legend()
     
-plt.show()
+# plt.show()
 
 
 ################################################################################
 
 
 # import json
-# distances = [1., 2., 3., 4., 8., 20.]
-# for distance in distances:
-#     with open(f'history\history_d={distance}_labels=2.json') as json_file:
+# hirtory = os.listdir('history')
+# for h in hirtory:
+#     with open(f'history\{h}') as json_file:
 #         data = json.load(json_file)
-#         plt.plot(data['epochs'], data['test_losses'], label=str(distance))
+#         plt.plot(data['epochs'], data['test_losses'], label=str(h))
 #         plt.legend()
 # plt.show()

@@ -63,14 +63,14 @@ class NoisyPairsDataset(Dataset):
             self.abnormal_data.append(abnormal_d)
 
         self.ds_len = 0
-        self.ds_len += len(self.normal_data) + len(self.normal_data) * len(self.abnormal_data)
+        self.ds_len += len(self.normal_data) * 2 + len(self.normal_data) * len(self.abnormal_data)
         
     def __getitem__(self, index):
 
         # Pairs with equal normal labels
-        if index < len(self.normal_data):
+        if index < len(self.normal_data) * 2:
 
-            f_index = index
+            f_index = index // 2
             s_index = np.random.randint(0, len(self.normal_data))
 
             return (
@@ -78,7 +78,7 @@ class NoisyPairsDataset(Dataset):
                     torch.as_tensor(self.normal_data[s_index], dtype=torch.float32),
                 ), torch.as_tensor((1.), dtype=torch.float32)
             
-        else: index -= len(self.normal_data)      
+        else: index -= len(self.normal_data) * 2      
         
 
 
