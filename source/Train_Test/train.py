@@ -36,9 +36,9 @@ def contrastive_loss(emb_1, emb_2, y):
 #########################################################
 SEED = 42
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 155
+EPOCHS = 15
 
-LR = 0.001
+LR = 0.01
 STEP_SIZE = EPOCHS / 5
 GAMMA = 0.75
 

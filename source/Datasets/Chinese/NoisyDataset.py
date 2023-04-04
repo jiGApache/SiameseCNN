@@ -35,14 +35,12 @@ class NoisyPairsDataset(Dataset):
 
         self.normal_data = []
         normal_df = df.loc[
-                (df['First_label'] == self.NORMAL_LABEL) | \
-                (df['Second_label'] == self.NORMAL_LABEL) | \
-                (df['Third_label'] == self.NORMAL_LABEL)
-            ].reset_index(drop=True)
+            (df['First_label'] == self.NORMAL_LABEL)
+        ].reset_index(drop=True)
 
         for DATA_TYPE in DATA_TYPES:
             for i in range(len(normal_df)):
-                self.normal_data.append(scipy.io.loadmat(f'Data\ChineseDataset\Train\{DATA_TYPE}\{normal_df["Recording"][i]}.mat')['ECG'])
+                self.normal_data.append(scipy.io.loadmat(f'Data\ChineseDataset\Train\{DATA_TYPE}\{normal_df["Recording"][i]}.mat')['ECG'][[2, 5], :])
 
 
 
@@ -51,14 +49,14 @@ class NoisyPairsDataset(Dataset):
 
             abnormal_d = []
             abnormal_df = df.loc[
-                (df['First_label'] == label) | \
-                (df['Second_label'] == label) | \
-                (df['Third_label'] == label)
+                (df['First_label'] == label) & \
+                (np.isnan(df['Second_label'])) & \
+                (np.isnan(df['Third_label']))
             ].reset_index(drop=True)
 
             for DATA_TYPE in DATA_TYPES:
                 for i in range(len(abnormal_df)):
-                    abnormal_d.append(scipy.io.loadmat(f'Data\ChineseDataset\Train\{DATA_TYPE}\{abnormal_df["Recording"][i]}.mat')['ECG'])
+                    abnormal_d.append(scipy.io.loadmat(f'Data\ChineseDataset\Train\{DATA_TYPE}\{abnormal_df["Recording"][i]}.mat')['ECG'][[2, 5], :])
 
             self.abnormal_data.append(abnormal_d)
 

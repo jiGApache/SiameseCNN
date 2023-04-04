@@ -26,7 +26,7 @@ class Siamese(nn.Module):
         # )
 
         self.conv1 = nn.Sequential(
-            nn.Conv1d(12, 128, kernel_size=400),
+            nn.Conv1d(2, 128, kernel_size=400),
             nn.BatchNorm1d(128),
             nn.LeakyReLU(negative_slope=self.slope),
 
