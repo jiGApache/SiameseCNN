@@ -8,10 +8,8 @@ from Datasets.Chinese.NoisyDataset import NoisyPairsDataset as DS_Noisy
 import numpy as np
 from Models.SiameseModel import Siamese
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader 
 from torch.utils.data import random_split
-from torch.optim.lr_scheduler import StepLR
 import matplotlib.pyplot as plt
 import os
 import random
@@ -36,19 +34,15 @@ def contrastive_loss(emb_1, emb_2, y):
 #########################################################
 SEED = 42
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 15
+EPOCHS = 20
 
-LR = 0.01
-STEP_SIZE = EPOCHS / 5
-GAMMA = 0.75
+LR = 0.001
 
-LOSS_FUNCTION = nn.BCELoss().cuda()
 LOSS_FUNCTION = contrastive_loss
 BATCH_SIZE = 256
 WEIGHT_DECAY = 0.001
-THRESHHOLD = 0.5
 LOSS_MARGIN = 0. # Initializes in train\test loop
-CLASSES = [8, 9]
+CLASSES = [8, 9] # Infartion labels
 #########################################################
 
 torch.manual_seed(SEED)
@@ -56,18 +50,6 @@ torch.cuda.manual_seed(SEED)
 random.seed(SEED)
 np.random.seed(SEED)
 torch.backends.cudnn.benchmark = True
-
-
-def show_history(history):
-
-    plt.plot(history['epochs'], history['train_losses'], label='Train loss')
-    plt.plot(history['epochs'], history['test_losses'], label='Test loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.legend()
-    plt.grid(True)
-
-    plt.show()
 
 def print_progressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
         """
@@ -91,12 +73,24 @@ def print_progressBar (iteration, total, prefix = '', suffix = '', decimals = 1,
             print()
 
 full_ds = DS_Noisy(CLASSES)
-train_size = int(0.8 * full_ds.__len__())
-test_size = full_ds.__len__() - train_size
-train_ds, test_ds = random_split(full_ds, [train_size, test_size], generator=torch.Generator().manual_seed(SEED))
-train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, num_workers=2, persistent_workers=True, generator=torch.Generator().manual_seed(SEED))
-test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, generator=torch.Generator().manual_seed(SEED))
 
+
+# Разделение на Train и Val Тренировочного набора данных (Set 1 и Set 2)
+# train_size = int(0.5 * full_ds.__len__())
+# test_size = full_ds.__len__() - train_size
+
+# generator = torch.Generator().manual_seed(SEED)
+
+# train_ds, test_ds = random_split(full_ds, [train_size, test_size], generator=generator)
+# train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=2, persistent_workers=True, drop_last=True)
+# test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
+
+
+# Разделение на Train и Val Тренировочного и Тестового набора данных (Set 1 + Set 2 и Set 3)
+train_ds = DS_Noisy(CLASSES, folder='Train')
+test_ds = DS_Noisy(CLASSES, folder='Test')
+train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=2, persistent_workers=True, drop_last=True)
+test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=2, persistent_workers=True, drop_last=True)
 
 def train_epoch(epoch_counter):
 
@@ -108,6 +102,8 @@ def train_epoch(epoch_counter):
 
         TS1, TS2, label = TS_T[0].to(DEVICE, non_blocking=True), TS_T[1].to(DEVICE, non_blocking=True), label.to(DEVICE, non_blocking=True)
         out_emb_1, out_emb_2 = model(TS1, TS2)
+        # print(out_emb_1.shape)
+        # exit()
         loss = LOSS_FUNCTION(out_emb_1, out_emb_2, label)
 
         epoch_loss += loss.item()
@@ -118,7 +114,8 @@ def train_epoch(epoch_counter):
 
         del out_emb_1, out_emb_2, loss
 
-        print_progressBar(steps_in_epoch, math.ceil(train_size / BATCH_SIZE), prefix=f'{epoch_counter} Train epoch progress:', length=50)
+        # print_progressBar(steps_in_epoch, math.ceil(train_size / BATCH_SIZE), prefix=f'{epoch_counter} Train epoch progress:', length=50)
+        print_progressBar(steps_in_epoch, math.ceil((len(train_ds) - len(train_ds) % BATCH_SIZE) / BATCH_SIZE), prefix=f'{epoch_counter} Train epoch progress:', length=50)
 
     return epoch_loss / steps_in_epoch
 
@@ -139,19 +136,19 @@ def test_epoch(epoch_counter):
 
         del out_emb_1, out_emb_2, loss
 
-        print_progressBar(steps_in_epoch, math.ceil(test_size / BATCH_SIZE), prefix=f'{epoch_counter} Test epoch progress:', length=50)
+        # print_progressBar(steps_in_epoch, math.ceil(test_size / BATCH_SIZE), prefix=f'{epoch_counter} Test epoch progress:', length=50)
+        print_progressBar(steps_in_epoch, math.ceil((len(test_ds) - len(test_ds) % BATCH_SIZE) / BATCH_SIZE), prefix=f'{epoch_counter} Test epoch progress:', length=50)
 
     return epoch_loss / steps_in_epoch
 
 
 if __name__ == '__main__':
 
-    if not os.path.exists('history'):
-        os.mkdir('history')
-    if not os.path.exists('nets'):
-        os.mkdir('nets')
+    if not os.path.exists('history'): os.mkdir('history')
+    if not os.path.exists('nets'):    os.mkdir('nets')
 
-    distances = [1., 2., 3., 4., 8., 20.]
+    # distances = [1., 4., 8., 10., 15., 20.]
+    distances = [10.]
 
     for distance in distances:
 
@@ -164,10 +161,6 @@ if __name__ == '__main__':
         LOSS_MARGIN = distance
         model = Siamese().to(DEVICE)
         optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
-
-        # scheduler = StepLR(optimizer, 
-        #            step_size = STEP_SIZE,
-        #            gamma = GAMMA)
 
         for epoch in range(EPOCHS):
 
@@ -183,9 +176,7 @@ if __name__ == '__main__':
             history['train_losses'].append(train_loss)
             history['test_losses'].append(test_loss)
 
-            print(f'Epoch: {epoch+1} Train loss: {train_loss:.5f} Test loss:  {test_loss:.5f}\n\n')
-
-            # scheduler.step()
+            print(f'Epoch: {epoch+1} Train loss: {train_loss:.5f} Validation loss:  {test_loss:.5f}\n\n')
 
         torch.save(model.state_dict(), f'nets\SCNN_d={distance}_labels={len(CLASSES)}.pth')
 

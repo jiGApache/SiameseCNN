@@ -4,10 +4,8 @@ import scipy
 from Filtering.Neurokit2Filters import filter_ecg
 # from Filtering.PreprocessingFilters import filter_ecg
 import numpy as np
-import math
 
 np.random.seed(42)
-
 FRAGMENT_SIZE = 3000
 
 def prepare_dataset(path='Data\ChineseDataset'):
@@ -71,7 +69,8 @@ def prepare_dataset(path='Data\ChineseDataset'):
 
 
     
-    channel_means, channel_stds = get_channel_means_stds(total_data[:len(train_df)])
+    # channel_means, channel_stds = get_channel_means_stds(total_data[:len(train_df)])
+    channel_means, channel_stds = get_channel_means_stds(total_data)
 
     ## Normalizing filtered data
     if not os.path.exists(f'{path}\Train\\NormFilteredECG'): os.mkdir(f'{path}\Train\\NormFilteredECG')

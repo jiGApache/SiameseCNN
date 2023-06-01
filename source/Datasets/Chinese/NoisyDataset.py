@@ -10,7 +10,7 @@ import pandas as pd
 
 class NoisyPairsDataset(Dataset):
     
-    def __init__(self, labels = [3, 5], WITH_ROLL=False):
+    def __init__(self, labels = [3, 5], folder='Train'):
 
         random.seed(42)
         np.random.seed(42)
@@ -18,6 +18,7 @@ class NoisyPairsDataset(Dataset):
         torch.cuda.manual_seed(42)
 
         # Preparing dataset #########################################################################
+        self.folder = folder
         if not self.is_data_ready(): prepare_dataset(f'Data\ChineseDataset')
         #############################################################################################
 
@@ -25,11 +26,15 @@ class NoisyPairsDataset(Dataset):
         self.labels = labels
 
         df = pd.read_csv('Data\ChineseDataset\REFERENCE.csv', delimiter=',')
-        df = df.loc[df['Recording'] <= 'A4470']
+        if self.folder == 'Train':
+            df = df.loc[df['Recording'] <= 'A4470']
+        else:
+            df = df.loc[df['Recording'] >= 'A4471']
         
 
 
-        DATA_TYPES = ['NormFilteredECG', 'NormECG']
+        # DATA_TYPES = ['NormFilteredECG', 'NormECG']
+        DATA_TYPES = ['NormFilteredECG']
 
 
 
@@ -40,7 +45,7 @@ class NoisyPairsDataset(Dataset):
 
         for DATA_TYPE in DATA_TYPES:
             for i in range(len(normal_df)):
-                self.normal_data.append(scipy.io.loadmat(f'Data\ChineseDataset\Train\{DATA_TYPE}\{normal_df["Recording"][i]}.mat')['ECG'][[2, 5], :])
+                self.normal_data.append(scipy.io.loadmat(f'Data\ChineseDataset\{self.folder}\{DATA_TYPE}\{normal_df["Recording"][i]}.mat')['ECG'])
 
 
 
@@ -56,19 +61,19 @@ class NoisyPairsDataset(Dataset):
 
             for DATA_TYPE in DATA_TYPES:
                 for i in range(len(abnormal_df)):
-                    abnormal_d.append(scipy.io.loadmat(f'Data\ChineseDataset\Train\{DATA_TYPE}\{abnormal_df["Recording"][i]}.mat')['ECG'][[2, 5], :])
+                    abnormal_d.append(scipy.io.loadmat(f'Data\ChineseDataset\{self.folder}\{DATA_TYPE}\{abnormal_df["Recording"][i]}.mat')['ECG'])
 
             self.abnormal_data.append(abnormal_d)
 
         self.ds_len = 0
-        self.ds_len += len(self.normal_data) * 2 + len(self.normal_data) * len(self.abnormal_data)
+        self.ds_len += len(self.normal_data) * 10 + len(self.normal_data) * len(self.abnormal_data) * 5
         
     def __getitem__(self, index):
 
         # Pairs with equal normal labels
-        if index < len(self.normal_data) * 2:
+        if index < len(self.normal_data) * 10:
 
-            f_index = index // 2
+            f_index = index // 10
             s_index = np.random.randint(0, len(self.normal_data))
 
             return (
@@ -76,12 +81,12 @@ class NoisyPairsDataset(Dataset):
                     torch.as_tensor(self.normal_data[s_index], dtype=torch.float32),
                 ), torch.as_tensor((1.), dtype=torch.float32)
             
-        else: index -= len(self.normal_data) * 2      
+        else: index -= len(self.normal_data) * 10
         
 
 
         # Pairs with different labels (norm & abnorm)
-        f_index = index // len(self.abnormal_data)
+        f_index = index // (len(self.abnormal_data) * 5)
         abnormal_d = self.abnormal_data[index % len(self.abnormal_data)]
         s_index = np.random.randint(0, len(abnormal_d))
 
@@ -94,7 +99,7 @@ class NoisyPairsDataset(Dataset):
         return  self.ds_len
 
     def is_data_ready(self):
-        return os.path.exists('Data\ChineseDataset\Train\\NormFilteredECG') \
-            and os.path.exists('Data\ChineseDataset\Train\\NormECG') \
-                and len(os.listdir('Data\ChineseDataset\Train\\NormFilteredECG')) != 0 \
-                    and len(os.listdir('Data\ChineseDataset\Train\\NormECG')) != 0
+        return os.path.exists(f'Data\ChineseDataset\{self.folder}\\NormFilteredECG') \
+            and os.path.exists(f'Data\ChineseDataset\{self.folder}\\NormECG') \
+                and len(os.listdir(f'Data\ChineseDataset\{self.folder}\\NormFilteredECG')) != 0 \
+                    and len(os.listdir(f'Data\ChineseDataset\{self.folder}\\NormECG')) != 0
