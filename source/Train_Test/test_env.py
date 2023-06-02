@@ -16,7 +16,7 @@ from Models.EmbeddingModel import EmbeddingModule
 # from Datasets.Physionet.NoisyDataset import PairsDataset
 from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 
-# ds_noisy = NoisyPairsDataset(labels=[8, 9])
+# ds_noisy = NoisyPairsDataset(labels=[8, 9], folder='Train')
 # pair, label = ds_noisy.__getitem__(700) # Different but looks same: 8, 10
 
 # model = Siamese()
@@ -37,13 +37,7 @@ from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 
 ################################################################################
 
-ecg1 = scipy.io.loadmat('Data\ChineseDataset\Train\FilteredECG\A0001.mat')['ECG']
-ecg2 = scipy.io.loadmat('Data\ChineseDataset\Train\FilteredECG\A0050.mat')['ECG']
-plt.subplot(2, 1, 1)
-plt.plot(ecg1[0])
-plt.subplot(2, 1, 2)
-plt.plot(ecg2[0])
-plt.show()
+# ecg = scipy.io.loadmat('Data\ChineseDataset\Train\InitialSet\A0021.mat')['ECG'][0][0][2]
 # from Filtering.Neurokit2Filters import filter_ecg
 # ecg = filter_ecg(ecg)
 # plt.subplot(2, 1, 2)
@@ -64,10 +58,10 @@ plt.show()
 # # ELEMENTS_PER_CLASS = 50
 
 # # PCA - 1 | UMAP - 2
-# METHOD = 1
+# METHOD = 2
 
-# # DATA_TYPE = 'Test'
-# DATA_TYPE = 'Train'
+# DATA_TYPE = 'Test'
+# # DATA_TYPE = 'Train'
 
 # nets = os.listdir('nets')
 # for plot_index, net in enumerate(nets):
@@ -81,9 +75,7 @@ plt.show()
 #     abnormal_ECGs = []
 
 
-#     df = pd.read_csv('Data\ChineseDataset\REFERENCE.csv', delimiter=',')
-#     if DATA_TYPE == 'Train': df = df.loc[df['Recording'] <= 'A4470'].reset_index(drop=True)
-#     else:                    df = df.loc[df['Recording'] >= 'A4471'].reset_index(drop=True)
+#     df = pd.read_csv(f'Data\ChineseDataset\{DATA_TYPE}\LOCAL_REFERENCE.csv', delimiter=',')
 
 #     normal_df = df.loc[(df['First_label'] == normal_label)].reset_index(drop=True)
 #     for i in range(len(normal_df)):
@@ -145,12 +137,12 @@ plt.show()
 
 ################################################################################
 
-# import json
-# hirtory = os.listdir('history')
-# for h in hirtory:
-#     with open(f'history\{h}') as json_file:
-#         data = json.load(json_file)
-#         plt.plot(data['epochs'], data['test_losses'], label=f'{str(h)} Test_loss')
-#         plt.plot(data['epochs'], data['train_losses'], label=f'{str(h)} Train_loss')
-#         plt.legend()
-# plt.show()
+import json
+hirtory = os.listdir('history')
+for h in hirtory:
+    with open(f'history\{h}') as json_file:
+        data = json.load(json_file)
+        plt.plot(data['epochs'], data['test_losses'], label=f'{str(h)} Test_loss')
+        plt.plot(data['epochs'], data['train_losses'], label=f'{str(h)} Train_loss')
+        plt.legend()
+plt.show()

@@ -9,8 +9,6 @@ import numpy as np
 from Models.SiameseModel import Siamese
 import torch
 from torch.utils.data import DataLoader 
-from torch.utils.data import random_split
-import matplotlib.pyplot as plt
 import os
 import random
 import math
@@ -29,27 +27,6 @@ def contrastive_loss(emb_1, emb_2, y):
     loss = torch.mean(distances)
 
     return loss
-
-# Hyper params 
-#########################################################
-SEED = 42
-DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 20
-
-LR = 0.001
-
-LOSS_FUNCTION = contrastive_loss
-BATCH_SIZE = 256
-WEIGHT_DECAY = 0.001
-LOSS_MARGIN = 0. # Initializes in train\test loop
-CLASSES = [8, 9] # Infartion labels
-#########################################################
-
-torch.manual_seed(SEED)
-torch.cuda.manual_seed(SEED)
-random.seed(SEED)
-np.random.seed(SEED)
-torch.backends.cudnn.benchmark = True
 
 def print_progressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
         """
@@ -72,25 +49,31 @@ def print_progressBar (iteration, total, prefix = '', suffix = '', decimals = 1,
         if iteration == total: 
             print()
 
-full_ds = DS_Noisy(CLASSES)
+# Hyper params 
+#########################################################
+SEED = 42
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+EPOCHS = 100
 
+LR = 0.001
 
-# Разделение на Train и Val Тренировочного набора данных (Set 1 и Set 2)
-# train_size = int(0.5 * full_ds.__len__())
-# test_size = full_ds.__len__() - train_size
+LOSS_FUNCTION = contrastive_loss
+BATCH_SIZE = 256
+WEIGHT_DECAY = 0.001
+LOSS_MARGIN = 0. # Initializes in train\test loop
+CLASSES = [8, 9] # Infartion labels
+#########################################################
 
-# generator = torch.Generator().manual_seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed(SEED)
+random.seed(SEED)
+np.random.seed(SEED)
+torch.backends.cudnn.benchmark = True
 
-# train_ds, test_ds = random_split(full_ds, [train_size, test_size], generator=generator)
-# train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=2, persistent_workers=True, drop_last=True)
-# test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
-
-
-# Разделение на Train и Val Тренировочного и Тестового набора данных (Set 1 + Set 2 и Set 3)
-train_ds = DS_Noisy(CLASSES, folder='Train')
-test_ds = DS_Noisy(CLASSES, folder='Test')
+train_ds = DS_Noisy(labels=CLASSES, folder='Train')
+val_ds = DS_Noisy(labels=CLASSES, folder='Val')
 train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=2, persistent_workers=True, drop_last=True)
-test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=2, persistent_workers=True, drop_last=True)
+val_dl = DataLoader(val_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=2, persistent_workers=True, drop_last=True)
 
 def train_epoch(epoch_counter):
 
@@ -114,7 +97,6 @@ def train_epoch(epoch_counter):
 
         del out_emb_1, out_emb_2, loss
 
-        # print_progressBar(steps_in_epoch, math.ceil(train_size / BATCH_SIZE), prefix=f'{epoch_counter} Train epoch progress:', length=50)
         print_progressBar(steps_in_epoch, math.ceil((len(train_ds) - len(train_ds) % BATCH_SIZE) / BATCH_SIZE), prefix=f'{epoch_counter} Train epoch progress:', length=50)
 
     return epoch_loss / steps_in_epoch
@@ -125,7 +107,7 @@ def test_epoch(epoch_counter):
     steps_in_epoch = 0
     epoch_loss = 0.0
 
-    for TS_T, label in test_dl:
+    for TS_T, label in val_dl:
         steps_in_epoch += 1
 
         TS1, TS2, label = TS_T[0].to(DEVICE, non_blocking=True), TS_T[1].to(DEVICE, non_blocking=True), label.to(DEVICE, non_blocking=True)
@@ -136,8 +118,7 @@ def test_epoch(epoch_counter):
 
         del out_emb_1, out_emb_2, loss
 
-        # print_progressBar(steps_in_epoch, math.ceil(test_size / BATCH_SIZE), prefix=f'{epoch_counter} Test epoch progress:', length=50)
-        print_progressBar(steps_in_epoch, math.ceil((len(test_ds) - len(test_ds) % BATCH_SIZE) / BATCH_SIZE), prefix=f'{epoch_counter} Test epoch progress:', length=50)
+        print_progressBar(steps_in_epoch, math.ceil((len(val_ds) - len(val_ds) % BATCH_SIZE) / BATCH_SIZE), prefix=f'{epoch_counter} Test epoch progress:', length=50)
 
     return epoch_loss / steps_in_epoch
 
