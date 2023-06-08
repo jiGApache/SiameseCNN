@@ -13,10 +13,10 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 from Models.SiameseModel import Siamese
 from Models.EmbeddingModel import EmbeddingModule
-# from Datasets.Physionet.NoisyDataset import PairsDataset
-from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
+from Datasets.Physionet.NoisyDataset import PairsDataset
+# from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 
-# ds_noisy = NoisyPairsDataset(labels=[8, 9], folder='Train')
+# ds_noisy = PairsDataset(folder='Train', samples_per_element=2)
 # pair, label = ds_noisy.__getitem__(700) # Different but looks same: 8, 10
 
 # model = Siamese()
@@ -53,14 +53,19 @@ from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 ################################################################################
 
 
-# normal_label = 1
-# abnormal_labels = [8, 9]
+# # normal_label = 1
+# # abnormal_labels = [8, 9]
 # # ELEMENTS_PER_CLASS = 50
+
+
+# NORMAL_COL = 'NORM'
+# abnorm_cols = ['STTC', 'MI', 'HYP', 'CD']
 
 # # PCA - 1 | UMAP - 2
 # METHOD = 2
 
 # DATA_TYPE = 'Test'
+# # DATA_TYPE = 'Val'
 # # DATA_TYPE = 'Train'
 
 # nets = os.listdir('nets')
@@ -75,21 +80,21 @@ from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 #     abnormal_ECGs = []
 
 
-#     df = pd.read_csv(f'Data\ChineseDataset\{DATA_TYPE}\LOCAL_REFERENCE.csv', delimiter=',')
+#     df = pd.read_csv(f'Data\PTB-XL\{DATA_TYPE}\LOCAL_REFERENCE.csv', delimiter=',', index_col=None)
 
-#     normal_df = df.loc[(df['First_label'] == normal_label)].reset_index(drop=True)
+#     normal_df = df.loc[
+#         (df[NORMAL_COL] == 1)
+#     ].reset_index(drop=True)
 #     for i in range(len(normal_df)):
-#         normal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\\NormFilteredECG\{normal_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
+#         normal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\PTB-XL\{DATA_TYPE}\\NormFilteredECG\{str(normal_df["ecg_id"][i]).zfill(5)}.mat')['ECG'], dtype=torch.float32)[None, :, :])
 #         # normal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\\NormECG\{normal_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
 
-#     for label in abnormal_labels:
+#     for col in abnorm_cols:
 #         labeld_df = df.loc[(
-#             (df['First_label'] == label) & \
-#             (np.isnan(df['Second_label'])) & \
-#             (np.isnan(df['Third_label']))
+#             (df[col] == 1)
 #         )].reset_index(drop=True)
 #         for i in range(len(labeld_df)):
-#             abnormal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\\NormFilteredECG\{labeld_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
+#             abnormal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\PTB-XL\{DATA_TYPE}\\NormFilteredECG\{str(labeld_df["ecg_id"][i]).zfill(5)}.mat')['ECG'], dtype=torch.float32)[None, :, :])
 #             # abnormal_ECGs.append(torch.as_tensor(scipy.io.loadmat(f'Data\ChineseDataset\{DATA_TYPE}\\NormECG\{labeld_df["Recording"][i]}.mat')['ECG'], dtype=torch.float32)[None, :, :])
 
 
@@ -109,17 +114,16 @@ from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 #         pca = PCA(n_components=2, svd_solver='full')
 #         pca.fit(abnormal_embeddings + normal_embeddings)
 #         tf_normal_embeds = pca.transform(normal_embeddings)
-#         if len(abnormal_labels) > 0: tf_abnormal_embeds = pca.transform(abnormal_embeddings)
+#         tf_abnormal_embeds = pca.transform(abnormal_embeddings)
 #     else:
 #         import umap
 #         fit = umap.UMAP()
 #         fit.fit(abnormal_embeddings + normal_embeddings)
 #         tf_normal_embeds = fit.transform(normal_embeddings)
-#         if len(abnormal_labels) > 0: tf_abnormal_embeds = fit.transform(abnormal_embeddings)
+#         tf_abnormal_embeds = fit.transform(abnormal_embeddings)
 
 
 #     plt.subplot(2, 3, plot_index+1)
-#     plt.subplot(2, 3, plot_index+1).set_xlabel(net)
 #     plt.scatter(
 #         tf_normal_embeds[:, 0],
 #         tf_normal_embeds[:, 1],
@@ -131,18 +135,18 @@ from Datasets.Chinese.NoisyDataset import NoisyPairsDataset
 
 #     plt.margins(0.35, 0.35)
 #     plt.legend()
-    
+#     plt.title(f'D={net.split("=")[1].split(".")[0]}')
 # plt.show()
 
 
 ################################################################################
 
-import json
-hirtory = os.listdir('history')
-for h in hirtory:
-    with open(f'history\{h}') as json_file:
-        data = json.load(json_file)
-        plt.plot(data['epochs'], data['test_losses'], label=f'{str(h)} Test_loss')
-        plt.plot(data['epochs'], data['train_losses'], label=f'{str(h)} Train_loss')
-        plt.legend()
-plt.show()
+# import json
+# hirtory = os.listdir('history')
+# for h in hirtory:
+#     with open(f'history\{h}') as json_file:
+#         data = json.load(json_file)
+#         plt.plot(data['epochs'], data['test_losses'], label=f'{str(h)} Test_loss')
+#         plt.plot(data['epochs'], data['train_losses'], label=f'{str(h)} Train_loss')
+#         plt.legend()
+# plt.show()

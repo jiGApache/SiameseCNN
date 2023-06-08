@@ -1,105 +1,193 @@
-import os
+import wfdb
+import ast
 import pandas as pd
+import numpy as np
+import os
 import scipy.io
 from Filtering.Neurokit2Filters import filter_ecg
 # from Filtering.PreprocessingFilters import filter_ecg
-import numpy as np
-import math
+
 
 np.random.seed(42)
 
-FRAGMENT_SIZE = 3000   # or KERNEL_SIZE
-STEP_SIZE = 2000       # or STRIDE
-df = pd.read_csv('Data\PTB-XL\Train\\train_labels.csv', delimiter=',')
-dataset_size = len(df)
-total_data = []
-
-def prepare_dataset(path='Data\ChineseDataset\PreparedDataset_Noisy\\'):
-    
-    if not os.path.exists('Data\PTB-XL\Train\Filtered') or len(os.listdir('Data\PTB-XL\Train\Filtered')) == 0:
-        os.mkdir('Data\PTB-XL\Train\Filtered')
-
-        for i in range(dataset_size):
-            ecg = scipy.io.loadmat(f'Data\PTB-XL\Train\Clean\{str(df["ecg_id"][i]).zfill(5)}.mat')['ECG']
-            ecg = np.transpose(ecg)
-
-            ### Filtering EKG
-            ecg = filter_ecg(ecg)
-
-            scipy.io.savemat(f'Data\PTB-XL\Train\Filtered\{str(df["ecg_id"][i]).zfill(5)}.mat', {'ECG': ecg})
-
-            # recording = [ecg, df['Recording'][i]]        
-            total_data.append(ecg)
-
-            print_progressBar(i+1, dataset_size, prefix='Filtering ECG:', length=50)
+FRAGMENT_SIZE = 3000
+sampling_rate=500
 
 
+
+def load_raw_data(df, sampling_rate, path): # Reading ECG signals
+    if sampling_rate == 100:
+        data = [wfdb.rdsamp(path+f) for f in df.filename_lr]
     else:
-        for i in range(dataset_size):
-            ecg = scipy.io.loadmat(f'Data\PTB-XL\Train\Filtered\{str(df["ecg_id"][i]).zfill(5)}.mat')['ECG']
+        data = [wfdb.rdsamp(path+f) for f in df.filename_hr]
+    data = np.array([signal for signal, meta in data])
+    return data
 
-            # recording = [ecg, df['Recording'][i]]
-            total_data.append(ecg)
-
-            print_progressBar(i+1, dataset_size, prefix='Filtering ECG:', length=50)
-
-    print("Filtering done! Starting channel-wise ECG normalization...")
-
-
-    ## Channel-wise normalization
-    channel_means, channel_stds = get_channel_means_stds(total_data)
-    # channel_means = [-3.718357624889972e-06, -5.319391209417234e-05, -4.945751864238487e-05, 2.7634547420381818e-05, 2.2198677172505495e-05, -4.8649972926477536e-05, -5.057949826273172e-05, -0.00011746589092615135, -3.591956367084942e-05, -2.8080299717502795e-05, -7.547788461059586e-06, 3.886816171659815e-05]
-    # channel_stds = [0.098066450039095, 0.15970448599478773, 0.1160161432676049, 0.11918654198060893, 0.07185394529804712, 0.1305917404821007, 0.12825125933221615, 0.28536948725346756, 0.27532385031389156, 0.24518165680480666, 0.187966083727839, 0.14920102104532423]
-    for i, ecg in enumerate(total_data):
-        for j in range(12):
-            ecg[j] = (ecg[j] - channel_means[j]) / channel_stds[j]
-        print_progressBar(i+1, dataset_size, prefix='Normalizing ECG:', length=50)
-
-    print(f"Normaization done! Saving data to {path}")
+def aggregate_diagnostic(y_dic, agg_df):
+    tmp = []
+    for key in y_dic.keys():
+        if key in agg_df.index:
+            tmp.append(agg_df.loc[key].diagnostic_class)
+    return list(set(tmp))
 
 
-    bias = 0
-    for i, ecg in enumerate(total_data):
-        # total_fragments_in_ecg = math.floor((len(recording[0][0]) - FRAGMENT_SIZE) / STEP_SIZE) + 1 # Convolution formula
-        total_fragments_in_ecg = 2
-        
-        for fragment_index in range(total_fragments_in_ecg):
-            scipy.io.savemat(f'{path}{bias + fragment_index}_clean.mat', {'ECG': ecg[:, STEP_SIZE * fragment_index:STEP_SIZE * fragment_index + FRAGMENT_SIZE]})
+
+def prepare_dataset(path='Data/PTB-XL/'):
+    
+
+    DATA_TYPES = ['Train', 'Val', 'Test']
+    
+
+    # "Sorting" ecgs to different folders ###########################################################
+    if not os.path.exists(f'{path}/Train'): os.makedirs(f'{path}/Train/Initial')
+    if not os.path.exists(f'{path}/Val'): os.makedirs(f'{path}/Val/Initial')
+    if not os.path.exists(f'{path}/Test'): os.makedirs(f'{path}/Test/Initial')
+    if len(os.listdir(f'{path}/Train/Initial')) == 0 or \
+          len(os.listdir(f'{path}/Val/Initial')) == 0 or \
+              len(os.listdir(f'{path}/Test/Initial')) == 0: 
+
+        # load and convert annotation data
+        Y = pd.read_csv(path+'ptbxl_database.csv', index_col='ecg_id')
+        # String scp_codes to dict
+        Y.scp_codes = Y.scp_codes.apply(lambda x: ast.literal_eval(x))
+
+        # Load raw signal data
+        X = load_raw_data(Y, sampling_rate, path)
+
+        # Load scp_statements.csv for diagnostic aggregation
+        agg_df = pd.read_csv(path+'scp_statements.csv', index_col=0)
+        agg_df = agg_df[agg_df.diagnostic == 1]
+
+        # Apply diagnostic superclass
+        Y['diagnostic_superclass'] = Y.scp_codes.apply(aggregate_diagnostic, args=(agg_df,))
+
+
+        X_data = []; Y_data = []
+        # Split data into train and test
+        val_fold = 9
+        test_fold = 10
+        X_data.append(X[np.where((Y.strat_fold != test_fold) & (Y.strat_fold != val_fold))])                                # Train
+        Y_data.append(pd.DataFrame(Y[((Y.strat_fold != test_fold) & (Y.strat_fold != val_fold))].diagnostic_superclass))
+        X_data.append(X[np.where(Y.strat_fold == val_fold)])                                                                # Val
+        Y_data.append(pd.DataFrame(Y[Y.strat_fold == val_fold].diagnostic_superclass))
+        X_data.append(X[np.where(Y.strat_fold == test_fold)])                                                               # Test
+        Y_data.append(pd.DataFrame(Y[Y.strat_fold == test_fold].diagnostic_superclass))
+
+        for i, dtype in enumerate(DATA_TYPES):
+            Y_data[i]['STTC'] = Y_data[i]['diagnostic_superclass'].apply(lambda x: 1 if 'STTC' in x else 0)
+            Y_data[i]['NORM'] = Y_data[i]['diagnostic_superclass'].apply(lambda x: 1 if 'NORM' in x else 0)
+            Y_data[i]['MI']   = Y_data[i]['diagnostic_superclass'].apply(lambda x: 1 if 'MI' in x else 0)
+            Y_data[i]['HYP']  = Y_data[i]['diagnostic_superclass'].apply(lambda x: 1 if 'HYP' in x else 0)
+            Y_data[i]['CD']   = Y_data[i]['diagnostic_superclass'].apply(lambda x: 1 if 'CD' in x else 0)
+            Y_data[i] = Y_data[i].drop(['diagnostic_superclass'], axis=1)
+            Y_data[i].to_csv(f'{path}/{dtype}/LOCAL_REFERENCE.csv')
+            for i, ecg in zip(Y_data[i].index, X_data[i]):
+                scipy.io.savemat(f'{path}/{dtype}/Initial/{str(i).zfill(5)}.mat', {'ECG': np.transpose(ecg)})
+
+        del X;      del Y
+        del X_data; del Y_data
+
+
+
+    total_data = []
+
+    ### Filtering Data ###########################################################################################
+    for i, dtype in enumerate(DATA_TYPES):
+
+        local_ref = pd.read_csv(f'{path}/{dtype}/LOCAL_REFERENCE.csv', index_col=None)
+
+        if not os.path.exists(f'{path}/{dtype}/FilteredECG'): os.mkdir(f'{path}/{dtype}/FilteredECG')
+        if len(os.listdir(f'{path}/{dtype}/FilteredECG')) < len(local_ref):
+            for j in range(len(local_ref)):
+                ecg = scipy.io.loadmat(f'{path}/{dtype}/Initial/{str(local_ref["ecg_id"][j]).zfill(5)}.mat')['ECG']
             
-            #Gaussian noise
-            noise = np.random.normal(0, channel_stds[0]*0.1, [1, FRAGMENT_SIZE])
-            for j in range(1, 12):
-                noise = np.concatenate((noise, np.random.normal(0, channel_stds[j]*0.1, [1, FRAGMENT_SIZE])), axis=0)
+                ecg = filter_ecg(ecg)[:, 100:FRAGMENT_SIZE+100]
 
-            #Baseline wander
-            L = FRAGMENT_SIZE
-            x = np.linspace(0, L, L)
-            A = np.random.uniform(0.1, 1.)
-            T = L # 2 * L
-            PHI = np.random.uniform(0, 2 * math.pi)
-            wander = []
-            for j in x:
-                wander.append(A * np.cos(2 * math.pi * (j/T) + PHI))
-            noise = np.sum([noise, np.array(wander)], axis=0)
+                scipy.io.savemat(f'{path}/{dtype}/FilteredECG/{str(local_ref["ecg_id"][j]).zfill(5)}.mat', {'ECG': ecg})
 
-            if 'Rolled' in path:
-                roll = np.random.randint(-1500, 1500)
-                scipy.io.savemat(f'{path}{bias + fragment_index}_noisy.mat', {'ECG': np.roll(ecg[:, STEP_SIZE * fragment_index:STEP_SIZE * fragment_index + FRAGMENT_SIZE] + noise, roll, axis=1)})
-            else:
-                scipy.io.savemat(f'{path}{bias + fragment_index}_noisy.mat', {'ECG': ecg[:, STEP_SIZE * fragment_index:STEP_SIZE * fragment_index + FRAGMENT_SIZE] + noise})
-        
-        bias += total_fragments_in_ecg
+                # if folder == 'Train':
+                recording = [ecg, str(local_ref['ecg_id'][j]).zfill(5)]        
+                total_data.append(recording)
 
-        print_progressBar(i+1, dataset_size, prefix='Saving:', length=50)
+                print_progressBar(j+1, len(local_ref), prefix=f'Filtering {dtype} ECG:', length=50)
+        else:
+            for j in range(len(local_ref)):
+                # if folder == 'Train':
+                ecg = scipy.io.loadmat(f'{path}/{dtype}/FilteredECG/{str(local_ref["ecg_id"][j]).zfill(5)}.mat')['ECG']
+
+                recording = [ecg, str(local_ref['ecg_id'][j]).zfill(5)]
+                total_data.append(recording)
+
+                print_progressBar(j+1, len(local_ref), prefix=f'Reading filtered {dtype} ECG:', length=50)
+
+    print("Filtering done!")
+
+
+
+
+    channel_means, channel_stds = get_channel_means_stds(total_data)
+    del total_data
+
+    ## Normalizing filtered data #################################################################################
+    for i, dtype in enumerate(DATA_TYPES):
+
+        local_ref = pd.read_csv(f'{path}/{dtype}/LOCAL_REFERENCE.csv')
+
+        if not os.path.exists(f'{path}/{dtype}/NormFilteredECG'): os.mkdir(f'{path}/{dtype}/NormFilteredECG')
+        if len(os.listdir(f'{path}/{dtype}/NormFilteredECG')) < len(local_ref):
+            for j in range(len(local_ref)):
+
+                ecg = scipy.io.loadmat(f'{path}/{dtype}/FilteredECG/{str(local_ref["ecg_id"][j]).zfill(5)}.mat')['ECG']
+                
+                for k in range(12):
+                    ecg[0][k] = (ecg[0][k] - channel_means[k]) / channel_stds[k]
+
+                scipy.io.savemat(f'{path}/{dtype}/NormFilteredECG/{str(local_ref["ecg_id"][j]).zfill(5)}.mat', {'ECG': ecg})
+
+                print_progressBar(j+1, len(local_ref), prefix=f'Normalizing filtered ECG in {dtype}:', length=50)
+
+    print(f"Filtered ECG normaization done!")
+
+
+
+
+    ## Normalizing initial data ###########################################################################################################
+    for i, dtype in enumerate(DATA_TYPES):
+
+        local_ref = pd.read_csv(f'{path}/{dtype}/LOCAL_REFERENCE.csv')
+
+        if not os.path.exists(f'{path}/{dtype}/NormECG'): os.mkdir(f'{path}/{dtype}/NormECG')
+        if len(os.listdir(f'{path}/{dtype}/NormECG')) < len(local_ref):
+            for j in range(len(local_ref)):
+                
+                ecg = scipy.io.loadmat(f'{path}/{dtype}/Initial/{str(local_ref["ecg_id"][j]).zfill(5)}.mat')['ECG'][:, 100:FRAGMENT_SIZE+100]
+                ecg = np.transpose(ecg)
+
+                for k in range(12):
+                    ecg[0][k] = (ecg[0][k] - channel_means[k]) / channel_stds[k]
+
+                scipy.io.savemat(f'{path}/{dtype}/NormECG/{str(local_ref["ecg_id"][j]).zfill(5)}.mat', {'ECG': ecg})
+
+                print_progressBar(j+1, len(local_ref), prefix=f'Normalizing Initial ECG in {dtype}:', length=50)
+
+    print(f"Initial ECG normaization done!")
+
 
     print("Dataset preparation complete!")
 
 
+
 def get_channel_means_stds(total_data):
 
-    total_data = np.asarray(total_data)
-    means = total_data.mean(axis=(0,2))
-    stds = total_data.std(axis=(0,2))
+    ECGs = []
+    for i in range(len(total_data)):
+        ECGs.append(total_data[i][0])
+    
+    ECGs = np.asarray(ECGs)
+    means = ECGs.mean(axis=(0,2))
+    stds = ECGs.std(axis=(0,2))
+
+    del ECGs
 
     return means, stds
 

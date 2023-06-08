@@ -16,14 +16,13 @@ import json
 
 def contrastive_loss(emb_1, emb_2, y):
 
-    distances = []
+    distances = torch.zeros(len(y), dtype=torch.float32)
     for i in range(len(y)):
         if y[i] == 1:
-            distances.append(torch.square(torch.cdist(emb_1[None, i], emb_2[None, i], p=2)))    
+            distances[i] = torch.square(torch.cdist(emb_1[None, i], emb_2[None, i], p=2))
         else:
-            distances.append(torch.maximum(torch.tensor(0.), LOSS_MARGIN - torch.square(torch.cdist(emb_1[None, i], emb_2[None, i], p=2))))
+            distances[i] = torch.maximum(torch.as_tensor(0.), LOSS_MARGIN - torch.square(torch.cdist(emb_1[None, i], emb_2[None, i], p=2)))
 
-    distances = torch.cat(distances).to(DEVICE)
     loss = torch.mean(distances)
 
     return loss
@@ -53,7 +52,7 @@ def print_progressBar (iteration, total, prefix = '', suffix = '', decimals = 1,
 #########################################################
 SEED = 42
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 100
+EPOCHS = 1
 
 LR = 0.001
 
@@ -70,8 +69,10 @@ random.seed(SEED)
 np.random.seed(SEED)
 torch.backends.cudnn.benchmark = True
 
-train_ds = DS_Noisy(labels=CLASSES, folder='Train')
-val_ds = DS_Noisy(labels=CLASSES, folder='Val')
+# train_ds = DS_Noisy(labels=CLASSES, folder='Train', samples_per_element=2)
+# val_ds = DS_Noisy(labels=CLASSES, folder='Val', samples_per_element=2)
+train_ds = DS_Noisy(folder='Train', samples_per_element=2)
+val_ds = DS_Noisy(folder='Val', samples_per_element=2)
 train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=2, persistent_workers=True, drop_last=True)
 val_dl = DataLoader(val_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=2, persistent_workers=True, drop_last=True)
 
@@ -128,8 +129,8 @@ if __name__ == '__main__':
     if not os.path.exists('history'): os.mkdir('history')
     if not os.path.exists('nets'):    os.mkdir('nets')
 
-    # distances = [1., 4., 8., 10., 15., 20.]
-    distances = [10.]
+    distances = [1., 4., 8., 10., 15., 20.]
+    # distances = [10.]
 
     for distance in distances:
 

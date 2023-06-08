@@ -11,7 +11,7 @@ class NoisyPairsDataset(Dataset):
     
     def __init__(self, 
                  labels = [8, 9],
-                 samples_per_element=10, 
+                 samples_per_element=5, 
                  folder='Train'):
 
         random.seed(42)
@@ -27,7 +27,6 @@ class NoisyPairsDataset(Dataset):
         self.NORMAL_LABEL = 1
         assert samples_per_element % len(labels) == 0, '\'samples_per_element\' should be multiple of \'labels\' length'
         self.labels = labels
-        self.samples = samples_per_element
         
 
         df = pd.read_csv(f'Data/ChineseDataset/{folder}/LOCAL_REFERENCE.csv', delimiter=',')
@@ -42,7 +41,7 @@ class NoisyPairsDataset(Dataset):
 
         for DATA_TYPE in DATA_TYPES:
             for i in range(len(normal_df)):
-                self.normal_data.append(scipy.io.loadmat(f'Data\ChineseDataset\{self.folder}\{DATA_TYPE}\{normal_df["Recording"][i]}.mat')['ECG'])
+                self.normal_data.append(scipy.io.loadmat(f'Data/ChineseDataset/{self.folder}/{DATA_TYPE}/{normal_df["Recording"][i]}.mat')['ECG'])
 
 
         self.abnormal_data = []
@@ -57,34 +56,44 @@ class NoisyPairsDataset(Dataset):
 
             for DATA_TYPE in DATA_TYPES:
                 for i in range(len(abnormal_df)):
-                    abnormal_d.append(scipy.io.loadmat(f'Data\ChineseDataset\{self.folder}\{DATA_TYPE}\{abnormal_df["Recording"][i]}.mat')['ECG'])
+                    abnormal_d.append(scipy.io.loadmat(f'Data/ChineseDataset/{self.folder}/{DATA_TYPE}/{abnormal_df["Recording"][i]}.mat')['ECG'])
 
             self.abnormal_data.append(abnormal_d)
 
-        self.ds_len = int(len(self.normal_data) * self.samples +                                                           # For each normal ECG {samples} amount of random normal ECGs
-                          len(self.normal_data) * len(self.abnormal_data) * (self.samples / len(self.abnormal_data)))      # For each normal ECG {samples / len(abnormal_data)} amount of random abnormal ECG from each abnormal label
+
+        self.samples_per_normal = samples_per_element * len(self.abnormal_data)
+        self.samples_per_abnormal = samples_per_element
+
+        # These indices are used in order to guarantee the selection of the same ECGs in pairs to normal one in each EPOCH
+        self.normal_indices = np.random.choice(len(self.normal_data), len(self.normal_data), replace=False)
+        self.normal_indices = np.tile(self.normal_indices, self.samples_per_normal)
+        self.abnormal_indices = [np.random.choice(len(abn_d), len(abn_d), replace=False) for abn_d in self.abnormal_data]
+
+        self.ds_len = int(len(self.normal_data) * self.samples_per_normal +                             # For each normal ECG {samples} amount of random normal ECGs
+                          len(self.normal_data) * len(self.abnormal_data) * self.samples_per_abnormal)  # For each normal ECG {samples / len(abnormal_data)} amount of random abnormal ECG from each abnormal label
         
     def __getitem__(self, index):
 
         # Pairs with equal normal labels
-        if index < len(self.normal_data) * self.samples:
+        if index < len(self.normal_data) * self.samples_per_normal:
 
-            f_index = index // self.samples
-            s_index = np.random.randint(0, len(self.normal_data))
+            f_index = index // self.samples_per_normal
+            s_index = self.normal_indices[index]
 
             return (
                     torch.as_tensor(self.normal_data[f_index], dtype=torch.float32),
                     torch.as_tensor(self.normal_data[s_index], dtype=torch.float32),
                 ), torch.as_tensor((1.), dtype=torch.float32)
             
-        else: index -= len(self.normal_data) * self.samples
+        else: index -= len(self.normal_data) * self.samples_per_normal
         
 
 
         # Pairs with different labels (norm & abnorm)
-        f_index = index // self.samples
+        f_index = index // self.samples_per_normal
         abnormal_d = self.abnormal_data[index % len(self.abnormal_data)]
-        s_index = np.random.randint(0, len(abnormal_d))
+        indices = self.abnormal_indices[index % len(self.abnormal_data)]
+        s_index = indices[index % len(indices)]
 
         return (
                 torch.as_tensor(self.normal_data[f_index], dtype=torch.float32),
@@ -98,4 +107,4 @@ class NoisyPairsDataset(Dataset):
         return os.path.exists(f'Data/ChineseDataset/{self.folder}/NormFilteredECG') \
             and os.path.exists(f'Data/ChineseDataset/{self.folder}/NormECG') \
                 and len(os.listdir(f'Data/ChineseDataset/{self.folder}/NormFilteredECG')) != 0 \
-                    and len(os.listdir(f'Data\ChineseDataset\{self.folder}/NormECG')) != 0
+                    and len(os.listdir(f'Data/ChineseDataset/{self.folder}/NormECG')) != 0
